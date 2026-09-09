@@ -88,6 +88,12 @@ var channelReadOnlyFields = map[string]struct{}{
 	"balance":              {},
 	"balance_updated_time": {},
 	"used_quota":           {},
+	"upstream_provider_id": {},
+	"upstream_remote_id":   {},
+	"upstream_group_id":    {},
+	"upstream_key_id":      {},
+	"upstream_rate":        {},
+	"upstream_cost_rate":   {},
 }
 
 func clearChannelReadOnlyFields(channel *PatchChannel, requestData map[string]any) {
@@ -108,6 +114,24 @@ func clearChannelReadOnlyFields(channel *PatchChannel, requestData map[string]an
 	}
 	if _, ok := requestData["used_quota"]; ok {
 		channel.UsedQuota = 0
+	}
+	if _, ok := requestData["upstream_provider_id"]; ok {
+		channel.UpstreamProviderID = nil
+	}
+	if _, ok := requestData["upstream_remote_id"]; ok {
+		channel.UpstreamRemoteID = nil
+	}
+	if _, ok := requestData["upstream_group_id"]; ok {
+		channel.UpstreamGroupID = nil
+	}
+	if _, ok := requestData["upstream_key_id"]; ok {
+		channel.UpstreamKeyID = nil
+	}
+	if _, ok := requestData["upstream_rate"]; ok {
+		channel.UpstreamRate = nil
+	}
+	if _, ok := requestData["upstream_cost_rate"]; ok {
+		channel.UpstreamCostRate = nil
 	}
 }
 

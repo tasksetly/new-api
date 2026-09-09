@@ -180,3 +180,37 @@ describe('audit log sidebar entry', () => {
     expect(titles).toContain('Audit Logs')
   })
 })
+
+describe('upstream sidebar entry', () => {
+  it('legacy configurations show Upstream immediately after Channels', () => {
+    const { result } = sidebarFor(
+      { admin: { enabled: true, channel: true } },
+      { admin: { enabled: true, channel: true } }
+    )
+    const items =
+      result.current.find((group) => group.id === 'admin')?.items ?? []
+    const channelsIndex = items.findIndex((item) => item.title === 'Channels')
+
+    expect(items[channelsIndex + 1]).toMatchObject({
+      title: 'Upstream',
+      url: '/upstream-providers',
+    })
+  })
+
+  it('preserves the independent upstream toggle when saved', () => {
+    const config = parseSidebarModulesAdmin(
+      '{"admin":{"enabled":true,"channel":true}}'
+    )
+    expect(config.admin.upstream).toBe(true)
+
+    config.admin.upstream = false
+    const saved = parseSidebarModulesAdmin(serializeSidebarModulesAdmin(config))
+    const { result } = sidebarFor(saved)
+    const titles = result.current
+      .flatMap((group) => group.items)
+      .map((item) => item.title)
+
+    expect(titles).toContain('Channels')
+    expect(titles).not.toContain('Upstream')
+  })
+})

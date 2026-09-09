@@ -29,6 +29,7 @@ import {
   MessageSquare,
   PlugZap,
   Radio,
+  Server,
   ServerCog,
   Settings,
   ShieldCheck,
@@ -136,6 +137,11 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
+          },
+          {
+            title: t('Upstream'),
+            url: '/upstream-providers',
+            icon: Server,
           },
           {
             title: t('Models'),

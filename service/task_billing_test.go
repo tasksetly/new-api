@@ -50,6 +50,8 @@ func TestMain(m *testing.M) {
 		&model.Token{},
 		&model.Log{},
 		&model.Channel{},
+		&model.UpstreamProvider{},
+		&model.UpstreamGroup{},
 		&model.Midjourney{},
 		&model.TopUp{},
 		&model.UserSubscription{},

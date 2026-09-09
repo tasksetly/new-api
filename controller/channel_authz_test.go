@@ -87,11 +87,23 @@ func TestChannelHasSensitiveChanges(t *testing.T) {
 		updated.Balance = 99
 		updated.UsedQuota = 100
 		updated.ResponseTime = 200
+		updated.UpstreamProviderID = common.GetPointer(9)
+		updated.UpstreamRemoteID = common.GetPointer("remote-account")
+		updated.UpstreamGroupID = common.GetPointer("premium")
+		updated.UpstreamKeyID = common.GetPointer("remote-key")
+		updated.UpstreamRate = common.GetPointer(1.5)
+		updated.UpstreamCostRate = common.GetPointer(0.75)
 
 		assert.False(t, channelHasSensitiveChanges(&updated, origin, map[string]any{
-			"balance":       updated.Balance,
-			"used_quota":    updated.UsedQuota,
-			"response_time": updated.ResponseTime,
+			"balance":              updated.Balance,
+			"used_quota":           updated.UsedQuota,
+			"response_time":        updated.ResponseTime,
+			"upstream_provider_id": *updated.UpstreamProviderID,
+			"upstream_remote_id":   *updated.UpstreamRemoteID,
+			"upstream_group_id":    *updated.UpstreamGroupID,
+			"upstream_key_id":      *updated.UpstreamKeyID,
+			"upstream_rate":        *updated.UpstreamRate,
+			"upstream_cost_rate":   *updated.UpstreamCostRate,
 		}))
 	})
 }
@@ -104,6 +116,12 @@ func TestClearChannelReadOnlyFields(t *testing.T) {
 		Balance:            44.5,
 		BalanceUpdatedTime: 55,
 		UsedQuota:          66,
+		UpstreamProviderID: common.GetPointer(7),
+		UpstreamRemoteID:   common.GetPointer("remote-account"),
+		UpstreamGroupID:    common.GetPointer("default"),
+		UpstreamKeyID:      common.GetPointer("remote-key"),
+		UpstreamRate:       common.GetPointer(1.25),
+		UpstreamCostRate:   common.GetPointer(0.625),
 		Models:             "gpt-4o",
 		Group:              "default",
 	}}
@@ -115,6 +133,12 @@ func TestClearChannelReadOnlyFields(t *testing.T) {
 		"balance":              channel.Balance,
 		"balance_updated_time": channel.BalanceUpdatedTime,
 		"used_quota":           channel.UsedQuota,
+		"upstream_provider_id": *channel.UpstreamProviderID,
+		"upstream_remote_id":   *channel.UpstreamRemoteID,
+		"upstream_group_id":    *channel.UpstreamGroupID,
+		"upstream_key_id":      *channel.UpstreamKeyID,
+		"upstream_rate":        *channel.UpstreamRate,
+		"upstream_cost_rate":   *channel.UpstreamCostRate,
 		"models":               channel.Models,
 		"group":                channel.Group,
 	})
@@ -125,6 +149,12 @@ func TestClearChannelReadOnlyFields(t *testing.T) {
 	assert.Zero(t, channel.Balance)
 	assert.Zero(t, channel.BalanceUpdatedTime)
 	assert.Zero(t, channel.UsedQuota)
+	assert.Nil(t, channel.UpstreamProviderID)
+	assert.Nil(t, channel.UpstreamRemoteID)
+	assert.Nil(t, channel.UpstreamGroupID)
+	assert.Nil(t, channel.UpstreamKeyID)
+	assert.Nil(t, channel.UpstreamRate)
+	assert.Nil(t, channel.UpstreamCostRate)
 	assert.Equal(t, "gpt-4o", channel.Models)
 	assert.Equal(t, "default", channel.Group)
 }

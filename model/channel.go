@@ -50,6 +50,14 @@ type Channel struct {
 	ParamOverride     *string `json:"param_override" gorm:"type:text"`
 	HeaderOverride    *string `json:"header_override" gorm:"type:text"`
 	Remark            *string `json:"remark" gorm:"type:varchar(255)" validate:"max=255"`
+	// Upstream binding metadata is populated when a remote provider key is
+	// provisioned into a local channel. Credentials remain in Key as usual.
+	UpstreamProviderID *int     `json:"upstream_provider_id,omitempty" gorm:"index;uniqueIndex:idx_channel_upstream_provider_key,priority:1"`
+	UpstreamRemoteID   *string  `json:"upstream_remote_id,omitempty" gorm:"type:varchar(128);index"`
+	UpstreamGroupID    *string  `json:"upstream_group_id,omitempty" gorm:"type:varchar(128);index"`
+	UpstreamKeyID      *string  `json:"upstream_key_id,omitempty" gorm:"type:varchar(128);index;uniqueIndex:idx_channel_upstream_provider_key,priority:2"`
+	UpstreamRate       *float64 `json:"upstream_rate,omitempty"`
+	UpstreamCostRate   *float64 `json:"upstream_cost_rate,omitempty"`
 	// add after v0.8.5
 	ChannelInfo ChannelInfo `json:"channel_info" gorm:"type:json"`
 
