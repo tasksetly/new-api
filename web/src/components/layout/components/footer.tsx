@@ -42,6 +42,9 @@ interface FooterProps {
   className?: string
 }
 
+const CONTACT_URL = 'https://t.me/FlexusAI'
+const CONTACT_LABEL_KEY = 'Contact'
+
 const NEW_API_FOOTER_ATTRIBUTION_KEY = [
   'footer',
   'new' + 'api',
@@ -118,6 +121,24 @@ function LegalLinks(props: { leadingSeparator?: boolean }) {
         </Fragment>
       ))}
     </>
+  )
+}
+
+// Renders the operator contact channel next to the copyright row, matching the
+// surrounding footer link styling. Emits a single anchor so the parent flex
+// container's gap controls spacing.
+function ContactLink() {
+  const { t } = useTranslation()
+
+  return (
+    <a
+      href={CONTACT_URL}
+      target='_blank'
+      rel='noopener noreferrer'
+      className='hover:text-foreground transition-colors duration-200'
+    >
+      {t(CONTACT_LABEL_KEY)}
+    </a>
   )
 }
 
@@ -237,7 +258,8 @@ export function Footer(props: FooterProps) {
               dangerouslySetInnerHTML={{ __html: footerHtml }}
             />
             <div className='border-border/60 text-muted-foreground/45 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t pt-4 text-xs sm:w-auto sm:justify-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-5'>
-              <LegalLinks />
+              <ContactLink />
+              <LegalLinks leadingSeparator />
               <ProjectAttribution currentYear={currentYear} inline />
             </div>
           </div>
@@ -298,6 +320,7 @@ export function Footer(props: FooterProps) {
               &copy; {currentYear} {displayName}.{' '}
               {props.copyright ?? t('footer.defaultCopyright')}
             </span>
+            <ContactLink />
             <LegalLinks leadingSeparator />
           </div>
           <ProjectAttribution currentYear={currentYear} />

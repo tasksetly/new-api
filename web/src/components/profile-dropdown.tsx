@@ -21,6 +21,7 @@ import { User, Wallet, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { IconTelegram } from '@/assets/brand-icons'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -39,6 +40,9 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 const avatarFallbackClassName = 'font-semibold text-white'
+
+// Operator contact channel, mirrored in the site footer.
+const CONTACT_URL = 'https://t.me/FlexusAI'
 
 export function ProfileDropdown() {
   const { t } = useTranslation()
@@ -135,6 +139,17 @@ export function ProfileDropdown() {
               {t('System Settings')}
             </DropdownMenuItem>
           )}
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            render={
+              <a href={CONTACT_URL} target='_blank' rel='noopener noreferrer' />
+            }
+          >
+            <IconTelegram className='size-4' />
+            {t('Contact')}
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
