@@ -115,6 +115,11 @@ export interface ChannelOtherSettings {
   upstream_model_update_ignored_models?: string[]
   upstream_model_update_last_check_time?: number
   upstream_model_update_last_detected_models?: string[]
+  sub2api_rate_sync_enabled?: boolean
+  sub2api_rate_sync_last_time?: number
+  sub2api_rate_sync_last_rate?: number
+  sub2api_rate_sync_peak_multiplier?: number
+  sub2api_rate_sync_last_error?: string
   advanced_custom?: AdvancedCustomConfig
 }
 
@@ -211,6 +216,36 @@ export interface FetchModelsResponse {
   success: boolean
   message?: string
   data?: string[]
+}
+
+/**
+ * Values reported by the Sub2API billing document.
+ *
+ * `rate` is the upstream's declared base multiplier and `cost_rate` is the value
+ * written into the channel cost fields. `peak_factor` is the peak coefficient
+ * that applied at the moment of the probe, so the multiplier the upstream
+ * actually charged for that instant is `rate * peak_factor`.
+ */
+export interface Sub2APIRateSyncData {
+  id: number
+  rate: number
+  cost_rate: number
+  peak_factor: number
+}
+
+export interface Sub2APIRateResponse {
+  success: boolean
+  message?: string
+  data?: Sub2APIRateSyncData
+}
+
+export interface Sub2APIRateSyncToggleResponse {
+  success: boolean
+  message?: string
+  data?: {
+    id: number
+    enabled: boolean
+  }
 }
 
 export interface CopyChannelResponse {

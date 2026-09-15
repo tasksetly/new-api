@@ -22,6 +22,7 @@ func RegisterScheduledSystemTasks() {
 	service.RegisterSystemTaskHandler(modelUpdateHandler{})
 	service.RegisterSystemTaskHandler(midjourneyPollHandler{})
 	service.RegisterSystemTaskHandler(asyncTaskPollHandler{})
+	service.RegisterSystemTaskHandler(sub2APIRateSyncHandler{})
 }
 
 // channelTestHandler runs the scheduled "test all channels" job. Enablement and
@@ -149,6 +150,36 @@ func (asyncTaskPollHandler) NewPayload() any { return nil }
 
 func (asyncTaskPollHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
 	summary := service.RunTaskPollingOnce(ctx, service.NewSystemTaskProgressReporter(task, runnerID))
+	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
+}
+
+// sub2APIRateSyncHandler syncs the upstream billing multiplier declared by
+// Sub2API channels that opted in. The per-channel switch, not the scheduler, is
+// the authority on which channels are polled, so this handler stays enabled and
+// simply no-ops when nothing opted in.
+type sub2APIRateSyncHandler struct{}
+
+func (sub2APIRateSyncHandler) Type() string { return model.SystemTaskTypeSub2APIRateSync }
+
+func (sub2APIRateSyncHandler) Enabled() bool {
+	return common.GetEnvOrDefaultBool("SUB2API_RATE_SYNC_TASK_ENABLED", true)
+}
+
+func (sub2APIRateSyncHandler) Interval() time.Duration {
+	intervalMinutes := common.GetEnvOrDefault(
+		"SUB2API_RATE_SYNC_TASK_INTERVAL_MINUTES",
+		sub2APIRateSyncDefaultIntervalMinutes,
+	)
+	if intervalMinutes < 1 {
+		intervalMinutes = sub2APIRateSyncDefaultIntervalMinutes
+	}
+	return time.Duration(intervalMinutes) * time.Minute
+}
+
+func (sub2APIRateSyncHandler) NewPayload() any { return nil }
+
+func (sub2APIRateSyncHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
+	summary := service.SyncEnabledSub2APIRateChannels(ctx)
 	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
 }
 

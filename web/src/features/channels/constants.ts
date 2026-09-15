@@ -25,6 +25,10 @@ export const CHANNEL_TYPE_NEW_API = 60
 
 export const CHANNEL_TYPE_TASK_PLUGIN = 61
 
+// Sub2API channels expose GET /v1/sub2api/billing on the upstream, which lets
+// new-api read the multiplier the upstream actually charges this channel's key.
+export const CHANNEL_TYPE_SUB2API = 59
+
 export const CHANNEL_TYPES = {
   0: 'Unknown',
   1: 'OpenAI',

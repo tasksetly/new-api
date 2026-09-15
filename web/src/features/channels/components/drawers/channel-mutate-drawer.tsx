@@ -132,12 +132,15 @@ import {
   getPrefillGroups,
   getTaskPluginOptions,
   refreshCodexCredential,
+  probeSub2APIRate,
+  syncSub2APIRate,
 } from '../../api'
 import {
   ADD_MODE_OPTIONS,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   CHANNEL_STATUS_LABELS,
   CHANNEL_TYPE_OPTIONS,
+  CHANNEL_TYPE_SUB2API,
   CHANNEL_TYPE_TASK_PLUGIN,
   channelTypeOptionsForTaskPluginBind,
   CHANNEL_TYPE_WARNINGS,
@@ -266,6 +269,7 @@ const ADVANCED_SETTINGS_SECTION_IDS = {
   extraSettings: 'channel-section-advanced-extra-settings',
   fieldPassthrough: 'channel-section-advanced-field-passthrough',
   upstreamModelDetection: 'channel-section-advanced-upstream-model-detection',
+  sub2APIRateSync: 'channel-section-advanced-sub2api-rate-sync',
 } as const
 const ADVANCED_SETTINGS_CHILD_SECTION_IDS: string[] = Object.values(
   ADVANCED_SETTINGS_SECTION_IDS
@@ -307,6 +311,7 @@ const SENSITIVE_FORM_FIELDS = [
   'upstream_model_update_check_enabled',
   'upstream_model_update_auto_sync_enabled',
   'upstream_model_update_ignored_models',
+  'sub2api_rate_sync_enabled',
 ] satisfies (keyof ChannelFormValues)[]
 
 function readAdvancedSettingsPreference(): boolean {
@@ -604,6 +609,7 @@ export function ChannelMutateDrawer({
   const [fetchModelsDialogOpen, setFetchModelsDialogOpen] = useState(false)
   const [isCodexCredentialRefreshing, setIsCodexCredentialRefreshing] =
     useState(false)
+  const [isSub2APIRateSyncing, setIsSub2APIRateSyncing] = useState(false)
   const initialModelsRef = useRef<string[]>([])
   const initialModelMappingRef = useRef<string>('')
   const initialStatusCodeMappingRef = useRef<string>('')
@@ -732,6 +738,7 @@ export function ChannelMutateDrawer({
   const currentUpstreamModelUpdateIgnoredModels = form.watch(
     'upstream_model_update_ignored_models'
   )
+  const currentSub2APIRateSyncEnabled = form.watch('sub2api_rate_sync_enabled')
   const shouldPreviewUnsavedModels =
     !isEditing ||
     (currentType === CHANNEL_TYPE_ADVANCED_CUSTOM && canEditSensitive)
@@ -1035,13 +1042,35 @@ export function ChannelMutateDrawer({
     currentUpstreamModelUpdateAutoSyncEnabled ||
     currentUpstreamModelUpdateIgnoredModels?.trim()
   )
+  // Rate sync metadata is written by the backend whenever a sync runs, so it is
+  // read from the persisted settings rather than from the form: editing the
+  // channel never rewrites these values.
+  const sub2APIRateSyncMeta = useMemo(() => {
+    const settings = parseSettingsRecord(currentSettings)
+    const lastTime = Number(settings.sub2api_rate_sync_last_time) || 0
+    const lastRate = Number(settings.sub2api_rate_sync_last_rate)
+    const peakMultiplier = Number(settings.sub2api_rate_sync_peak_multiplier)
+    return {
+      lastTime,
+      lastRate: Number.isFinite(lastRate) ? lastRate : null,
+      peakMultiplier: Number.isFinite(peakMultiplier) ? peakMultiplier : 1,
+      lastError:
+        typeof settings.sub2api_rate_sync_last_error === 'string'
+          ? settings.sub2api_rate_sync_last_error
+          : '',
+    }
+  }, [currentSettings])
+  const sub2APIRateSyncConfigured =
+    currentSub2APIRateSyncEnabled === true ||
+    Number(sub2APIRateSyncMeta.lastTime) > 0
   const advancedConfigured = Boolean(
     routingStrategyConfigured ||
     internalNotesConfigured ||
     overrideRulesConfigured ||
     extraSettingsConfigured ||
     fieldPassthroughConfigured ||
-    upstreamModelDetectionConfigured
+    upstreamModelDetectionConfigured ||
+    sub2APIRateSyncConfigured
   )
   const advancedNavChildren: ChannelEditorNavChildItem[] = [
     {
@@ -1078,6 +1107,68 @@ export function ChannelMutateDrawer({
       title: t('Upstream Model Detection Settings'),
       configured: upstreamModelDetectionConfigured,
     })
+  }
+  if (currentType === CHANNEL_TYPE_SUB2API) {
+    advancedNavChildren.push({
+      id: ADVANCED_SETTINGS_SECTION_IDS.sub2APIRateSync,
+      title: t('Sub2API Upstream Rate Sync'),
+      configured: sub2APIRateSyncConfigured,
+    })
+  }
+
+  const handleSyncSub2APIRate = async () => {
+    if (!channelId) return
+    setIsSub2APIRateSyncing(true)
+    try {
+      const res = await syncSub2APIRate(channelId)
+      if (!res.success || !res.data) {
+        toast.error(res.message || t('Failed to sync the upstream rate'))
+        return
+      }
+      toast.success(
+        t('Upstream rate synchronized: {{rate}} (cost multiplier {{cost}})', {
+          rate: res.data.rate,
+          cost: res.data.cost_rate,
+        })
+      )
+      await queryClient.invalidateQueries({
+        queryKey: channelsQueryKeys.detail(channelId),
+      })
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('Failed to sync the upstream rate')
+      )
+    } finally {
+      setIsSub2APIRateSyncing(false)
+    }
+  }
+
+  const handleProbeSub2APIRate = async () => {
+    if (!channelId) return
+    setIsSub2APIRateSyncing(true)
+    try {
+      const res = await probeSub2APIRate(channelId)
+      if (!res.success || !res.data) {
+        toast.error(res.message || t('Failed to read the upstream rate'))
+        return
+      }
+      toast.info(
+        t(
+          'Upstream declares {{rate}} for this key ({{peak}} peak factor at check time)',
+          { rate: res.data.rate, peak: res.data.peak_factor }
+        )
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('Failed to read the upstream rate')
+      )
+    } finally {
+      setIsSub2APIRateSyncing(false)
+    }
   }
   const editorNavItems: ChannelEditorNavItem[] = [
     {
@@ -4863,6 +4954,122 @@ export function ChannelMutateDrawer({
                                     </>
                                   )}
                                 </div>
+                              </div>
+                            </fieldset>
+                          </div>
+                        )}
+
+                        {currentType === CHANNEL_TYPE_SUB2API && (
+                          <div
+                            id={ADVANCED_SETTINGS_SECTION_IDS.sub2APIRateSync}
+                            className={sideDrawerSectionClassName(
+                              configuredAdvancedSectionClassName(
+                                'scroll-mt-4',
+                                sub2APIRateSyncConfigured
+                              )
+                            )}
+                          >
+                            <CardHeading
+                              title={t('Sub2API Upstream Rate Sync')}
+                              icon={<RefreshCw className='h-4 w-4' />}
+                              iconTone='info'
+                            />
+                            <fieldset
+                              disabled={sensitiveLocked}
+                              className='space-y-4 disabled:opacity-60'
+                            >
+                              <div className='divide-border divide-y border-y'>
+                                <FormField
+                                  control={form.control}
+                                  name='sub2api_rate_sync_enabled'
+                                  render={({ field }) => (
+                                    <FormItem className='flex items-center justify-between px-4 py-3'>
+                                      <div className='space-y-0.5'>
+                                        <FormLabel>
+                                          {t(
+                                            'Auto Sync Upstream Rate Multiplier'
+                                          )}
+                                        </FormLabel>
+                                        <FormDescription>
+                                          {t(
+                                            'Periodically read the billing multiplier the upstream declares for this channel key and store it as the cost multiplier'
+                                          )}
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </div>
+                                      <FormControl>
+                                        <Switch
+                                          checked={field.value === true}
+                                          onCheckedChange={field.onChange}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              <div className='text-muted-foreground space-y-2 border-t pt-3 text-xs'>
+                                <div>
+                                  <span className='text-foreground font-medium'>
+                                    {t('Last sync time')}:
+                                  </span>{' '}
+                                  {formatUnixTime(
+                                    sub2APIRateSyncMeta.lastTime
+                                  )}
+                                </div>
+                                <div>
+                                  <span className='text-foreground font-medium'>
+                                    {t('Synced multiplier')}:
+                                  </span>{' '}
+                                  {sub2APIRateSyncMeta.lastTime > 0 &&
+                                  sub2APIRateSyncMeta.lastRate !== null
+                                    ? sub2APIRateSyncMeta.lastRate
+                                    : t('None')}
+                                  {sub2APIRateSyncMeta.peakMultiplier > 1 && (
+                                    <span className='ml-1'>
+                                      {t('(peak factor {{peak}} at check)', {
+                                        peak:
+                                          sub2APIRateSyncMeta.peakMultiplier,
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                                {sub2APIRateSyncMeta.lastError && (
+                                  <div className='text-destructive'>
+                                    <span className='font-medium'>
+                                      {t('Last sync error')}:
+                                    </span>{' '}
+                                    {sub2APIRateSyncMeta.lastError}
+                                  </div>
+                                )}
+                              </div>
+                              <div className='flex flex-wrap gap-2'>
+                                <Button
+                                  type='button'
+                                  variant='outline'
+                                  size='sm'
+                                  disabled={
+                                    !channelId || isSub2APIRateSyncing
+                                  }
+                                  onClick={handleSyncSub2APIRate}
+                                >
+                                  {isSub2APIRateSyncing ? (
+                                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                                  ) : (
+                                    <RefreshCw className='mr-2 h-4 w-4' />
+                                  )}
+                                  {t('Sync now')}
+                                </Button>
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={
+                                    !channelId || isSub2APIRateSyncing
+                                  }
+                                  onClick={handleProbeSub2APIRate}
+                                >
+                                  {t('Read upstream rate without saving')}
+                                </Button>
                               </div>
                             </fieldset>
                           </div>

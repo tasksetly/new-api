@@ -37,6 +37,8 @@ import type {
   MultiKeyStatusResponse,
   SearchChannelsParams,
   SearchChannelsResponse,
+  Sub2APIRateResponse,
+  Sub2APIRateSyncToggleResponse,
   TagOperationParams,
 } from './types'
 
@@ -370,6 +372,54 @@ export async function resetCodexUsage(
     `/api/channel/${channelId}/codex/usage/reset`,
     {},
     channelActionConfig({ disableDuplicate: true })
+  )
+  return res.data
+}
+
+// ============================================================================
+// Sub2API Upstream Rate Sync
+// ============================================================================
+
+/**
+ * Read the multiplier the Sub2API upstream declares for a channel's key
+ * without writing anything.
+ */
+export async function probeSub2APIRate(
+  channelId: number
+): Promise<Sub2APIRateResponse> {
+  const res = await api.post(
+    '/api/channel/sub2api_rate/probe',
+    { id: channelId },
+    channelActionConfig()
+  )
+  return res.data
+}
+
+/**
+ * Fetch the upstream multiplier and write it into the channel cost fields.
+ */
+export async function syncSub2APIRate(
+  channelId: number
+): Promise<Sub2APIRateResponse> {
+  const res = await api.post(
+    '/api/channel/sub2api_rate/sync',
+    { id: channelId },
+    channelActionConfig()
+  )
+  return res.data
+}
+
+/**
+ * Toggle the automatic upstream rate sync for one channel.
+ */
+export async function setSub2APIRateSyncEnabled(
+  channelId: number,
+  enabled: boolean
+): Promise<Sub2APIRateSyncToggleResponse> {
+  const res = await api.post(
+    '/api/channel/sub2api_rate/enabled',
+    { id: channelId, enabled },
+    channelActionConfig()
   )
   return res.data
 }

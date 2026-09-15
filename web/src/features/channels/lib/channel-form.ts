@@ -21,6 +21,7 @@ import { z } from 'zod'
 import {
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   CHANNEL_TYPE_NEW_API,
+  CHANNEL_TYPE_SUB2API,
   CHANNEL_TYPE_TASK_PLUGIN,
   CHANNEL_STATUS,
   ERROR_MESSAGES,
@@ -284,6 +285,8 @@ export const channelFormSchema = z
     upstream_model_update_check_enabled: z.boolean().optional(),
     upstream_model_update_auto_sync_enabled: z.boolean().optional(),
     upstream_model_update_ignored_models: z.string().optional(),
+    // Sub2API upstream rate sync (stored in settings JSON)
+    sub2api_rate_sync_enabled: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -334,6 +337,17 @@ export const channelFormSchema = z
           'OpenAI Models route is required to enable upstream model checks'
         )
       }
+    }
+
+    if (
+      data.sub2api_rate_sync_enabled === true &&
+      data.type !== CHANNEL_TYPE_SUB2API
+    ) {
+      addRequiredIssue(
+        ctx,
+        'sub2api_rate_sync_enabled',
+        'Only Sub2API channels can sync an upstream billing rate'
+      )
     }
 
     if ([3, 18, 21, 39, 41, 49].includes(data.type) && !data.other?.trim()) {
@@ -464,6 +478,7 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   upstream_model_update_check_enabled: false,
   upstream_model_update_auto_sync_enabled: false,
   upstream_model_update_ignored_models: '',
+  sub2api_rate_sync_enabled: false,
   advanced_custom: '',
 }
 
@@ -530,6 +545,7 @@ export function transformChannelToFormDefaults(
   let upstreamModelUpdateCheckEnabled = false
   let upstreamModelUpdateAutoSyncEnabled = false
   let upstreamModelUpdateIgnoredModels = ''
+  let sub2APIRateSyncEnabled = false
   let advancedCustom = ''
 
   if (channel.settings) {
@@ -556,6 +572,7 @@ export function transformChannelToFormDefaults(
       )
         ? parsed.upstream_model_update_ignored_models.join(',')
         : ''
+      sub2APIRateSyncEnabled = parsed.sub2api_rate_sync_enabled === true
       if (parsed.advanced_custom) {
         advancedCustom = stringifyAdvancedCustomConfig(parsed.advanced_custom)
       }
@@ -609,6 +626,7 @@ export function transformChannelToFormDefaults(
     upstream_model_update_check_enabled: upstreamModelUpdateCheckEnabled,
     upstream_model_update_auto_sync_enabled: upstreamModelUpdateAutoSyncEnabled,
     upstream_model_update_ignored_models: upstreamModelUpdateIgnoredModels,
+    sub2api_rate_sync_enabled: sub2APIRateSyncEnabled,
     advanced_custom: advancedCustom,
   }
 }
