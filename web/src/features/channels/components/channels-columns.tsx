@@ -1150,6 +1150,26 @@ export function useChannelsColumns(
         size: 180,
       },
 
+      // Upstream Rate column
+      {
+        accessorKey: 'upstream_rate',
+        header: t('Upstream Rate'),
+        meta: { mobileHidden: true },
+        cell: ({ row }) => {
+          const upstreamRate = row.original.upstream_rate
+          if (upstreamRate == null) {
+            return <span className='text-muted-foreground text-xs'>-</span>
+          }
+          return (
+            <span className='text-sm font-mono'>
+              {upstreamRate.toFixed(4)}
+            </span>
+          )
+        },
+        size: 120,
+        enableSorting: false,
+      },
+
       // Response Time column
       {
         accessorKey: 'response_time',
