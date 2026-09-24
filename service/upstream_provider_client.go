@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ var (
 	errUpstreamProviderUnauthorized = errors.New("upstream rejected the credentials")
 	errUpstreamProviderTOTPRequired = errors.New("upstream requires two-factor authentication; save its TOTP secret first")
 	errUpstreamProviderRejected     = errors.New("upstream rejected the request")
+	errUpstreamProviderManualToken  = errors.New("NewAPI management access token requires manual replacement")
 )
 
 // upstreamProviderCredentials only exists while an upstream request is being
@@ -71,9 +73,12 @@ type upstreamProviderRemoteGroup struct {
 	Name               string
 	Description        string
 	Platform           string
+	Models             []string
 	SubscriptionType   string
 	Rate               float64
 	EffectiveRate      *float64
+	SuccessRate        *float64
+	RequestCount       int64
 	IsDynamic          bool
 	PeakRateEnabled    bool
 	PeakRateMultiplier *float64
@@ -277,10 +282,15 @@ func upstreamProviderResponseError(message string) error {
 		"authentication failed",
 		"not authenticated",
 		"not logged in",
+		"access denied",
+		"forbidden",
 		"未登录",
 		"令牌无效",
 		"令牌过期",
 		"认证失败",
+		"无权访问",
+		"无权限",
+		"权限不足",
 	} {
 		if strings.Contains(normalized, marker) {
 			return errUpstreamProviderUnauthorized
@@ -291,10 +301,27 @@ func upstreamProviderResponseError(message string) error {
 
 func upstreamBearerHeaders(token string) http.Header {
 	headers := make(http.Header)
+	token = normalizeUpstreamBearerToken(token)
 	if token != "" {
 		headers.Set("Authorization", "Bearer "+token)
 	}
 	return headers
+}
+
+// normalizeUpstreamBearerToken accepts the raw token stored by the provider
+// form as well as a copied `Bearer <token>` value. The upstream management
+// APIs receive exactly one Bearer scheme regardless of how the operator
+// pasted the credential.
+func normalizeUpstreamBearerToken(token string) string {
+	token = strings.TrimSpace(token)
+	parts := strings.Fields(token)
+	if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+		return parts[1]
+	}
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return ""
 }
 
 func upstreamCookieHeaders(cookie string) http.Header {
@@ -341,9 +368,12 @@ func upstreamString(value any) string {
 	case string:
 		return strings.TrimSpace(result)
 	case float64:
+		if math.IsNaN(result) || math.IsInf(result, 0) || result != math.Trunc(result) || result < math.MinInt64 || result > math.MaxInt64 {
+			return ""
+		}
 		return strconv.FormatInt(int64(result), 10)
 	case json.Number:
-		return result.String()
+		return strings.TrimSpace(result.String())
 	default:
 		return ""
 	}
@@ -629,6 +659,9 @@ func (client *sub2APIUpstreamClient) Models(ctx context.Context, key string) ([]
 	return client.models(ctx, key)
 }
 
+// codeGoUpstreamClient implements CodeGo-Api's dashboard management protocol.
+// CodeGo-Api requires the authenticated user's numeric ID in addition to the
+// bearer access token on every user-management request.
 type codeGoUpstreamClient struct {
 	*upstreamProviderHTTPClient
 }
@@ -656,31 +689,13 @@ func (client *codeGoUpstreamClient) Login(ctx context.Context, credentials upstr
 	if err := decodeUpstreamPayload(body, &data); err != nil {
 		return nil, err
 	}
-	if required, _ := data["require_2fa"].(bool); required {
-		if strings.TrimSpace(credentials.TOTPSecret) == "" {
-			return nil, errUpstreamProviderTOTPRequired
-		}
-		code, err := totp.GenerateCode(credentials.TOTPSecret, time.Now())
-		if err != nil {
-			return nil, errors.New("saved upstream TOTP secret is invalid")
-		}
-		body, headers, err = client.request(ctx, http.MethodPost, "/api/user/login/2fa", nil, map[string]string{"code": code}, upstreamCookieHeaders(cookie))
-		if err != nil {
-			return nil, err
-		}
-		if refreshedCookie := upstreamCookieFromHeaders(headers); refreshedCookie != "" {
-			cookie = refreshedCookie
-		}
-		if err := decodeUpstreamPayload(body, &data); err != nil {
-			return nil, err
-		}
-	}
 	userID := upstreamString(data["id"])
 	if userID == "" {
 		return nil, errors.New("upstream login did not return a user ID")
 	}
 	headersForToken := upstreamCookieHeaders(cookie)
 	headersForToken.Set("CodeGo-Api-User", userID)
+	headersForToken.Set("New-Api-User", userID)
 	body, _, err = client.request(ctx, http.MethodGet, "/api/user/token", nil, nil, headersForToken)
 	if err != nil {
 		return nil, err
@@ -697,8 +712,7 @@ func (client *codeGoUpstreamClient) Login(ctx context.Context, credentials upstr
 		}
 		token = firstUpstreamNonEmpty(upstreamString(tokenResponse["access_token"]), upstreamString(tokenResponse["token"]))
 	}
-	token = strings.TrimSpace(token)
-	if token == "" {
+	if token = normalizeUpstreamBearerToken(token); token == "" {
 		return nil, errors.New("upstream did not return a management access token")
 	}
 	return &upstreamProviderRemoteSession{Token: token, RemoteUserID: userID}, nil
@@ -710,10 +724,14 @@ func (client *codeGoUpstreamClient) Refresh(_ context.Context, _ upstreamProvide
 
 func (client *codeGoUpstreamClient) managementHeaders(session upstreamProviderRemoteSession) (http.Header, error) {
 	if strings.TrimSpace(session.RemoteUserID) == "" {
-		return nil, errors.New("CodeGo management access token requires the remote user ID")
+		return nil, errors.New("CodeGo-Api management access token requires the remote user ID")
 	}
 	headers := upstreamBearerHeaders(session.Token)
-	headers.Set("CodeGo-Api-User", session.RemoteUserID)
+	remoteUserID := strings.TrimSpace(session.RemoteUserID)
+	// CodeGo-Api releases use CodeGo-Api-User, while older New-API-derived
+	// releases still validate the legacy New-Api-User header.
+	headers.Set("CodeGo-Api-User", remoteUserID)
+	headers.Set("New-Api-User", remoteUserID)
 	return headers, nil
 }
 
@@ -734,12 +752,12 @@ func (client *codeGoUpstreamClient) Profile(ctx context.Context, session upstrea
 	if !ok || quota < 0 {
 		return nil, errors.New("upstream returned an invalid quota")
 	}
-	statusBody, _, err := client.request(ctx, http.MethodGet, "/api/status", nil, nil, nil)
+	body, _, err = client.request(ctx, http.MethodGet, "/api/status", nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetch upstream quota conversion: %w", err)
 	}
 	var status map[string]any
-	if err := decodeUpstreamPayload(statusBody, &status); err != nil {
+	if err := decodeUpstreamPayload(body, &status); err != nil {
 		return nil, fmt.Errorf("parse upstream quota conversion: %w", err)
 	}
 	quotaPerUnit, ok := upstreamFloat(status["quota_per_unit"])
@@ -747,13 +765,12 @@ func (client *codeGoUpstreamClient) Profile(ctx context.Context, session upstrea
 		return nil, errors.New("upstream returned an invalid quota conversion")
 	}
 	balance := quota / quotaPerUnit
-	if math.IsNaN(balance) || math.IsInf(balance, 0) {
+	if math.IsNaN(balance) || math.IsInf(balance, 0) || balance < 0 {
 		return nil, errors.New("upstream balance conversion overflowed")
 	}
-	username := firstUpstreamNonEmpty(upstreamString(data["username"]), upstreamString(data["display_name"]))
 	return &upstreamProviderRemoteProfile{
 		RemoteUserID: firstUpstreamNonEmpty(upstreamString(data["id"]), session.RemoteUserID),
-		Username:     username,
+		Username:     firstUpstreamNonEmpty(upstreamString(data["username"]), upstreamString(data["display_name"])),
 		Balance:      &balance,
 	}, nil
 }
@@ -772,6 +789,7 @@ func (client *codeGoUpstreamClient) Groups(ctx context.Context, session upstream
 		return nil, err
 	}
 	groups := make([]upstreamProviderRemoteGroup, 0, len(data))
+	groupIndex := make(map[string]int, len(data))
 	for remoteID, group := range data {
 		remoteID = strings.TrimSpace(remoteID)
 		if remoteID == "" {
@@ -779,14 +797,98 @@ func (client *codeGoUpstreamClient) Groups(ctx context.Context, session upstream
 		}
 		ratio, isStatic := upstreamFloat(group["ratio"])
 		description := upstreamString(group["desc"])
+		platform := firstUpstreamNonEmpty(upstreamString(group["platform"]), upstreamString(group["owner_by"]))
 		if !isStatic || !upstreamValidMultiplier(ratio) {
-			groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: "codego", IsDynamic: true})
+			groupIndex[remoteID] = len(groups)
+			groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: platform, IsDynamic: true})
 			continue
 		}
 		effective := ratio
-		groups = append(groups, upstreamProviderRemoteGroup{
-			RemoteID: remoteID, Name: remoteID, Description: description, Platform: "codego", Rate: ratio, EffectiveRate: &effective,
-		})
+		groupIndex[remoteID] = len(groups)
+		groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: platform, Rate: ratio, EffectiveRate: &effective})
+	}
+
+	// CodeGo exposes model health separately from the compact group-ratio
+	// payload. Older versions may not have this endpoint, so keep the group
+	// snapshot usable when it is unavailable.
+	statusHeaders, err := client.managementHeaders(session)
+	if err == nil {
+		statusBody, _, statusErr := client.request(ctx, http.MethodGet, "/api/user/self/group-status", nil, nil, statusHeaders)
+		if statusErr == nil {
+			var status []struct {
+				Group        string `json:"group"`
+				RequestCount int64  `json:"request_count"`
+				Models       []struct {
+					Model        string   `json:"model"`
+					SuccessRate  *float64 `json:"success_rate"`
+					RequestCount int64    `json:"request_count"`
+				} `json:"models"`
+			}
+			if decodeErr := decodeUpstreamPayload(statusBody, &status); decodeErr == nil {
+				for _, item := range status {
+					index, ok := groupIndex[strings.TrimSpace(item.Group)]
+					if !ok {
+						continue
+					}
+					group := &groups[index]
+					group.RequestCount = item.RequestCount
+					var successTotal float64
+					var successRequests int64
+					for _, model := range item.Models {
+						modelName := strings.TrimSpace(model.Model)
+						if modelName != "" && !slices.Contains(group.Models, modelName) {
+							group.Models = append(group.Models, modelName)
+						}
+						if model.SuccessRate != nil && model.RequestCount > 0 {
+							successTotal += *model.SuccessRate * float64(model.RequestCount)
+							successRequests += model.RequestCount
+						}
+					}
+					if successRequests > 0 {
+						successRate := successTotal / float64(successRequests)
+						group.SuccessRate = &successRate
+					}
+				}
+			}
+		}
+	}
+
+	// Public pricing metadata contains the provider/owner label for each
+	// model. It is optional, but lets the management UI distinguish platforms
+	// when CodeGo exposes that metadata.
+	pricingHeaders, _ := client.managementHeaders(session)
+	body, _, pricingErr := client.request(ctx, http.MethodGet, "/api/pricing", nil, nil, pricingHeaders)
+	if pricingErr == nil {
+		var pricing struct {
+			Data []struct {
+				OwnerBy    string   `json:"owner_by"`
+				EnableGroup []string `json:"enable_groups"`
+			} `json:"data"`
+		}
+		if decodeErr := decodeUpstreamPayload(body, &pricing); decodeErr == nil {
+			platformsByGroup := make(map[string][]string)
+			for _, item := range pricing.Data {
+				platform := strings.TrimSpace(item.OwnerBy)
+				if platform == "" {
+					continue
+				}
+				for _, groupName := range item.EnableGroup {
+					groupName = strings.TrimSpace(groupName)
+					if _, ok := groupIndex[groupName]; !ok || slices.Contains(platformsByGroup[groupName], platform) {
+						continue
+					}
+					platformsByGroup[groupName] = append(platformsByGroup[groupName], platform)
+				}
+			}
+			for groupName, platforms := range platformsByGroup {
+				index, ok := groupIndex[groupName]
+				if !ok {
+					continue
+				}
+				slices.Sort(platforms)
+				groups[index].Platform = strings.Join(platforms, ", ")
+			}
+		}
 	}
 	return groups, nil
 }
@@ -813,12 +915,12 @@ func (client *codeGoUpstreamClient) Usage(ctx context.Context, session upstreamP
 	if !ok || quota < 0 {
 		return nil, errors.New("upstream returned an invalid usage quota")
 	}
-	statusBody, _, err := client.request(ctx, http.MethodGet, "/api/status", nil, nil, nil)
+	body, _, err = client.request(ctx, http.MethodGet, "/api/status", nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetch upstream quota conversion: %w", err)
 	}
 	var status map[string]any
-	if err := decodeUpstreamPayload(statusBody, &status); err != nil {
+	if err := decodeUpstreamPayload(body, &status); err != nil {
 		return nil, fmt.Errorf("parse upstream quota conversion: %w", err)
 	}
 	quotaPerUnit, ok := upstreamFloat(status["quota_per_unit"])
@@ -899,6 +1001,232 @@ func (client *codeGoUpstreamClient) DeleteKey(ctx context.Context, session upstr
 }
 
 func (client *codeGoUpstreamClient) Models(ctx context.Context, key string) ([]string, error) {
+	return client.models(ctx, key)
+}
+
+type newAPIUpstreamClient struct {
+	*upstreamProviderHTTPClient
+}
+
+func newNewAPIUpstreamClient(baseURL string) (*newAPIUpstreamClient, error) {
+	client, err := newUpstreamProviderHTTPClient(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	return &newAPIUpstreamClient{upstreamProviderHTTPClient: client}, nil
+}
+
+func (client *newAPIUpstreamClient) Login(context.Context, upstreamProviderCredentials) (*upstreamProviderRemoteSession, error) {
+	return nil, errors.New("NewAPI requires a manually supplied management access token")
+}
+
+func (client *newAPIUpstreamClient) Refresh(context.Context, upstreamProviderCredentials) (*upstreamProviderRemoteSession, error) {
+	return nil, errors.New("NewAPI management access tokens must be replaced manually")
+}
+
+func (client *newAPIUpstreamClient) quotaPerUnit(ctx context.Context) (float64, error) {
+	body, _, err := client.request(ctx, http.MethodGet, "/api/status", nil, nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("fetch upstream quota conversion: %w", err)
+	}
+	var status map[string]any
+	if err := decodeUpstreamPayload(body, &status); err != nil {
+		return 0, fmt.Errorf("parse upstream quota conversion: %w", err)
+	}
+	quotaPerUnit, ok := upstreamFloat(status["quota_per_unit"])
+	if !ok || quotaPerUnit <= 0 || math.IsInf(quotaPerUnit, 0) {
+		return 0, errors.New("upstream returned an invalid quota conversion")
+	}
+	return quotaPerUnit, nil
+}
+
+func (client *newAPIUpstreamClient) Profile(ctx context.Context, session upstreamProviderRemoteSession) (*upstreamProviderRemoteProfile, error) {
+	body, _, err := client.request(ctx, http.MethodGet, "/api/user/self", nil, nil, upstreamBearerHeaders(session.Token))
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]any
+	if err := decodeUpstreamPayload(body, &data); err != nil {
+		return nil, err
+	}
+	quota, ok := upstreamFloat(data["quota"])
+	if !ok || quota < 0 {
+		return nil, errors.New("upstream returned an invalid account quota")
+	}
+	quotaPerUnit, err := client.quotaPerUnit(ctx)
+	if err != nil {
+		return nil, err
+	}
+	balance := quota / quotaPerUnit
+	if math.IsNaN(balance) || math.IsInf(balance, 0) || balance < 0 {
+		return nil, errors.New("upstream balance conversion overflowed")
+	}
+	username := firstUpstreamNonEmpty(upstreamString(data["username"]), upstreamString(data["display_name"]))
+	return &upstreamProviderRemoteProfile{
+		RemoteUserID: upstreamString(data["id"]), Username: username, Balance: &balance,
+	}, nil
+}
+
+func (client *newAPIUpstreamClient) Groups(ctx context.Context, session upstreamProviderRemoteSession) ([]upstreamProviderRemoteGroup, error) {
+	body, _, err := client.request(ctx, http.MethodGet, "/api/user/self/groups", nil, nil, upstreamBearerHeaders(session.Token))
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]map[string]any
+	if err := decodeUpstreamPayload(body, &data); err != nil {
+		return nil, err
+	}
+	groups := make([]upstreamProviderRemoteGroup, 0, len(data))
+	for remoteID, group := range data {
+		remoteID = strings.TrimSpace(remoteID)
+		if remoteID == "" {
+			continue
+		}
+		ratio, isStatic := upstreamFloat(group["ratio"])
+		description := upstreamString(group["desc"])
+		if !isStatic || !upstreamValidMultiplier(ratio) {
+			groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: "newapi", IsDynamic: true})
+			continue
+		}
+		effective := ratio
+		groups = append(groups, upstreamProviderRemoteGroup{
+			RemoteID: remoteID, Name: remoteID, Description: description, Platform: "newapi", Rate: ratio, EffectiveRate: &effective,
+		})
+	}
+	return groups, nil
+}
+
+func (client *newAPIUpstreamClient) Usage(ctx context.Context, session upstreamProviderRemoteSession) (*upstreamProviderRemoteUsage, error) {
+	now := time.Now()
+	query := url.Values{
+		"start_timestamp": []string{strconv.FormatInt(now.AddDate(0, 0, -30).Unix(), 10)},
+		"end_timestamp":   []string{strconv.FormatInt(now.Unix(), 10)},
+	}
+	body, _, err := client.request(ctx, http.MethodGet, "/api/log/self/stat", query, nil, upstreamBearerHeaders(session.Token))
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]any
+	if err := decodeUpstreamPayload(body, &data); err != nil {
+		return nil, err
+	}
+	quota, ok := upstreamFloat(data["quota"])
+	if !ok || quota < 0 {
+		return nil, errors.New("upstream returned an invalid usage quota")
+	}
+	quotaPerUnit, err := client.quotaPerUnit(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cost := quota / quotaPerUnit
+	if !upstreamValidMultiplier(cost) {
+		return nil, errors.New("upstream usage conversion overflowed")
+	}
+	return &upstreamProviderRemoteUsage{Cost30Days: &cost}, nil
+}
+
+func (client *newAPIUpstreamClient) CreateKey(ctx context.Context, session upstreamProviderRemoteSession, name string, groupID string) (*upstreamProviderRemoteKey, error) {
+	if strings.TrimSpace(groupID) == "" {
+		return nil, errors.New("upstream group ID is required")
+	}
+	headers := upstreamBearerHeaders(session.Token)
+	body, _, err := client.request(ctx, http.MethodPost, "/api/token/", nil, map[string]any{
+		"name": name, "remain_quota": 0, "expired_time": -1, "unlimited_quota": true,
+		"model_limits_enabled": false, "model_limits": "", "allow_ips": "", "group": groupID,
+		"cross_group_retry": false,
+	}, headers)
+	if err != nil {
+		return nil, err
+	}
+	var created map[string]any
+	if err := decodeUpstreamPayload(body, &created); err != nil {
+		return nil, err
+	}
+	createdID := upstreamString(created["id"])
+	if parsedID, parseErr := strconv.Atoi(createdID); parseErr != nil || parsedID <= 0 {
+		createdID = ""
+	}
+	cleanupCreatedKey := func() {
+		if createdID == "" {
+			return
+		}
+		if cleanupErr := client.DeleteKey(ctx, session, createdID); cleanupErr != nil {
+			common.SysError("failed to remove an incomplete NewAPI token")
+		}
+	}
+	fail := func(createErr error) (*upstreamProviderRemoteKey, error) {
+		cleanupCreatedKey()
+		return nil, createErr
+	}
+
+	query := url.Values{"keyword": []string{name}, "p": []string{"1"}, "size": []string{"100"}}
+	body, _, err = client.request(ctx, http.MethodGet, "/api/token/search", query, nil, headers)
+	if err != nil {
+		return fail(err)
+	}
+	var search struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := decodeUpstreamPayload(body, &search); err != nil {
+		return fail(err)
+	}
+	var matchedID string
+	matchCount := 0
+	for _, item := range search.Items {
+		if upstreamString(item["name"]) != name {
+			continue
+		}
+		candidateID := upstreamString(item["id"])
+		parsedID, parseErr := strconv.Atoi(candidateID)
+		if parseErr != nil || parsedID <= 0 {
+			continue
+		}
+		if createdID != "" && candidateID == createdID {
+			matchedID = candidateID
+			continue
+		}
+		matchCount++
+		matchedID = candidateID
+	}
+	if createdID != "" {
+		if matchedID != createdID {
+			return fail(errors.New("created upstream API key could not be found"))
+		}
+	} else {
+		if matchCount != 1 {
+			if matchCount > 1 {
+				return fail(errors.New("created upstream API key name is ambiguous"))
+			}
+			return fail(errors.New("created upstream API key could not be found"))
+		}
+		createdID = matchedID
+	}
+	body, _, err = client.request(ctx, http.MethodPost, "/api/token/"+url.PathEscape(createdID)+"/key", nil, nil, headers)
+	if err != nil {
+		return fail(err)
+	}
+	var revealed struct {
+		Key string `json:"key"`
+	}
+	if err := decodeUpstreamPayload(body, &revealed); err != nil {
+		return fail(err)
+	}
+	if strings.TrimSpace(revealed.Key) == "" {
+		return fail(errors.New("upstream returned an empty API key"))
+	}
+	return &upstreamProviderRemoteKey{ID: createdID, Key: revealed.Key, Name: name, GroupID: groupID}, nil
+}
+
+func (client *newAPIUpstreamClient) DeleteKey(ctx context.Context, session upstreamProviderRemoteSession, keyID string) error {
+	parsedID, err := strconv.Atoi(strings.TrimSpace(keyID))
+	if err != nil || parsedID <= 0 {
+		return errors.New("invalid upstream API key ID")
+	}
+	_, _, err = client.request(ctx, http.MethodDelete, "/api/token/"+strconv.Itoa(parsedID), nil, nil, upstreamBearerHeaders(session.Token))
+	return err
+}
+
+func (client *newAPIUpstreamClient) Models(ctx context.Context, key string) ([]string, error) {
 	return client.models(ctx, key)
 }
 

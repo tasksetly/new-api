@@ -68,8 +68,12 @@ type UpstreamProviderGroupView struct {
 	RemoteGroupID           string   `json:"remote_group_id"`
 	Name                    string   `json:"name"`
 	Description             string   `json:"description,omitempty"`
+	Platform                string   `json:"platform,omitempty"`
+	Models                  []string `json:"models,omitempty"`
 	RateMultiplier          *float64 `json:"rate_multiplier,omitempty"`
 	EffectiveRateMultiplier *float64 `json:"effective_rate_multiplier,omitempty"`
+	SuccessRate             *float64 `json:"success_rate,omitempty"`
+	RequestCount            int64    `json:"request_count"`
 	IsDynamic               bool     `json:"is_dynamic"`
 	CorrectedRate           *float64 `json:"corrected_rate,omitempty"`
 	ChannelCount            int64    `json:"channel_count"`
@@ -277,6 +281,7 @@ func TestManagedUpstreamProvider(ctx context.Context, id int) (*upstreamProvider
 	if errors.Is(err, errUpstreamProviderUnauthorized) {
 		session, err = renewManagedUpstreamSession(ctx, provider, client, credentials)
 		if err == nil {
+			updateManagedUpstreamCredentials(&credentials, session)
 			profile, err = client.Profile(ctx, session)
 		}
 	}
@@ -444,6 +449,10 @@ func applyUpstreamProviderMutation(provider *model.UpstreamProvider, input Upstr
 	if provider == nil {
 		return errors.New("upstream provider is required")
 	}
+	if input.Token != nil {
+		normalizedToken := normalizeUpstreamBearerToken(*input.Token)
+		input.Token = &normalizedToken
+	}
 	if input.Name != nil {
 		provider.Name = strings.TrimSpace(*input.Name)
 	}
@@ -500,6 +509,13 @@ func applyUpstreamProviderMutation(provider *model.UpstreamProvider, input Upstr
 		}
 		*credential.field = ciphertext
 	}
+	if provider.Type == model.UpstreamProviderTypeNewAPI && input.Password == nil && input.RefreshToken == nil && input.TOTPSecret == nil {
+		// NewAPI only accepts the manually supplied management token.
+		provider.Username = ""
+		provider.PasswordEncrypted = ""
+		provider.RefreshTokenEncrypted = ""
+		provider.TotpSecretEncrypted = ""
+	}
 	if creating && (provider.Name == "" || provider.BaseURL == "") {
 		return errors.New("provider name and upstream URL are required")
 	}
@@ -524,15 +540,22 @@ func validateManagedUpstreamProviderCredentials(provider *model.UpstreamProvider
 	if provider.PasswordEncrypted != "" && provider.Username == "" {
 		return errors.New("upstream username is required when using a password")
 	}
-	if provider.Type == model.UpstreamProviderTypeCodeGo && provider.TokenEncrypted != "" &&
-		provider.PasswordEncrypted == "" && provider.UpstreamUserID == "" {
-		return errors.New("CodeGo access token requires the remote user ID")
+	if provider.Type == model.UpstreamProviderTypeCodeGo && provider.TokenEncrypted != "" && provider.UpstreamUserID == "" {
+		return errors.New("CodeGo-Api access token requires the remote user ID")
+	}
+	if provider.Type == model.UpstreamProviderTypeNewAPI {
+		if provider.TokenEncrypted == "" {
+			return errors.New("NewAPI management access token is required")
+		}
+		if provider.PasswordEncrypted != "" || provider.RefreshTokenEncrypted != "" || provider.TotpSecretEncrypted != "" {
+			return errors.New("NewAPI uses a manually supplied management access token; password, refresh token, and TOTP are not supported")
+		}
 	}
 	return nil
 }
 
 func validManagedUpstreamProviderType(providerType string) bool {
-	return providerType == model.UpstreamProviderTypeSub2API || providerType == model.UpstreamProviderTypeCodeGo
+	return providerType == model.UpstreamProviderTypeSub2API || providerType == model.UpstreamProviderTypeCodeGo || providerType == model.UpstreamProviderTypeNewAPI
 }
 
 func managedUpstreamClient(provider *model.UpstreamProvider) (upstreamProviderRemoteClient, error) {
@@ -544,6 +567,8 @@ func managedUpstreamClient(provider *model.UpstreamProvider) (upstreamProviderRe
 		return newSub2APIUpstreamClient(provider.BaseURL)
 	case model.UpstreamProviderTypeCodeGo:
 		return newCodeGoUpstreamClient(provider.BaseURL)
+	case model.UpstreamProviderTypeNewAPI:
+		return newNewAPIUpstreamClient(provider.BaseURL)
 	default:
 		return nil, errors.New("unsupported upstream provider type")
 	}
@@ -576,7 +601,8 @@ func managedUpstreamSession(ctx context.Context, provider *model.UpstreamProvide
 	if err != nil {
 		return nil, upstreamProviderRemoteSession{}, upstreamProviderCredentials{}, err
 	}
-	if strings.TrimSpace(credentials.Token) != "" && !managedUpstreamTokenExpired(credentials.ExpiresAt) {
+	if strings.TrimSpace(credentials.Token) != "" &&
+		(provider.Type == model.UpstreamProviderTypeNewAPI || !managedUpstreamTokenExpired(credentials.ExpiresAt)) {
 		return client, upstreamProviderRemoteSession{
 			Token: credentials.Token, RefreshToken: credentials.Refresh, RemoteUserID: credentials.RemoteUser, ExpiresAt: credentials.ExpiresAt,
 		}, credentials, nil
@@ -585,11 +611,25 @@ func managedUpstreamSession(ctx context.Context, provider *model.UpstreamProvide
 	if err != nil {
 		return nil, upstreamProviderRemoteSession{}, credentials, err
 	}
+	credentials.Token = session.Token
+	credentials.Refresh = session.RefreshToken
+	credentials.RemoteUser = session.RemoteUserID
+	credentials.ExpiresAt = session.ExpiresAt
 	return client, session, credentials, nil
 }
 
 func managedUpstreamTokenExpired(expiresAt *time.Time) bool {
 	return expiresAt != nil && !expiresAt.After(time.Now().Add(upstreamProviderTokenSkew))
+}
+
+func updateManagedUpstreamCredentials(credentials *upstreamProviderCredentials, session upstreamProviderRemoteSession) {
+	if credentials == nil {
+		return
+	}
+	credentials.Token = session.Token
+	credentials.Refresh = session.RefreshToken
+	credentials.RemoteUser = session.RemoteUserID
+	credentials.ExpiresAt = session.ExpiresAt
 }
 
 // renewManagedUpstreamSession gives a Sub2API refresh token the first chance
@@ -602,6 +642,12 @@ func renewManagedUpstreamSession(
 	client upstreamProviderRemoteClient,
 	credentials upstreamProviderCredentials,
 ) (upstreamProviderRemoteSession, error) {
+	if provider != nil && (provider.Type == model.UpstreamProviderTypeCodeGo || provider.Type == model.UpstreamProviderTypeNewAPI) {
+		if strings.TrimSpace(credentials.Token) != "" {
+			return upstreamProviderRemoteSession{}, errUpstreamProviderManualToken
+		}
+		return upstreamProviderRemoteSession{}, errors.New("upstream management access token is missing")
+	}
 	var refreshErr error
 	if provider.Type == model.UpstreamProviderTypeSub2API && strings.TrimSpace(credentials.Refresh) != "" {
 		session, err := client.Refresh(ctx, credentials)
@@ -686,6 +732,7 @@ func syncManagedUpstreamProvider(ctx context.Context, provider *model.UpstreamPr
 	if errors.Is(err, errUpstreamProviderUnauthorized) {
 		session, err = renewManagedUpstreamSession(ctx, provider, client, credentials)
 		if err == nil {
+			updateManagedUpstreamCredentials(&credentials, session)
 			profile, err = client.Profile(ctx, session)
 		}
 	}
@@ -696,6 +743,7 @@ func syncManagedUpstreamProvider(ctx context.Context, provider *model.UpstreamPr
 	if errors.Is(err, errUpstreamProviderUnauthorized) {
 		session, err = renewManagedUpstreamSession(ctx, provider, client, credentials)
 		if err == nil {
+			updateManagedUpstreamCredentials(&credentials, session)
 			groups, err = client.Groups(ctx, session)
 		}
 	}
@@ -706,6 +754,7 @@ func syncManagedUpstreamProvider(ctx context.Context, provider *model.UpstreamPr
 	if errors.Is(usageErr, errUpstreamProviderUnauthorized) {
 		session, usageErr = renewManagedUpstreamSession(ctx, provider, client, credentials)
 		if usageErr == nil {
+			updateManagedUpstreamCredentials(&credentials, session)
 			usage, usageErr = client.Usage(ctx, session)
 		}
 	}
@@ -726,8 +775,12 @@ func syncManagedUpstreamProvider(ctx context.Context, provider *model.UpstreamPr
 			RemoteGroupID:           group.RemoteID,
 			Name:                    group.Name,
 			Description:             group.Description,
+			Platform:                group.Platform,
+			Models:                  marshalUpstreamGroupModels(group.Models),
 			RateMultiplier:          rate,
 			EffectiveRateMultiplier: group.EffectiveRate,
+			SuccessRate:             group.SuccessRate,
+			RequestCount:            group.RequestCount,
 			IsDynamic:               group.IsDynamic,
 			SyncedAt:                now,
 		})
@@ -866,6 +919,10 @@ func PublicManagedUpstreamError(err error) string {
 	switch {
 	case errors.Is(err, errUpstreamProviderUnauthorized):
 		return "upstream rejected the credentials"
+	case errors.Is(err, errUpstreamProviderManualToken):
+		return "upstream management access token expired or was rejected; replace it manually"
+	case err != nil && strings.Contains(err.Error(), "management access token is missing"):
+		return "upstream management access token is missing"
 	case errors.Is(err, errUpstreamProviderTOTPRequired):
 		return "upstream requires two-factor authentication"
 	case errors.Is(err, errUpstreamProviderRejected):
@@ -944,6 +1001,7 @@ func upstreamProviderGroupView(provider *model.UpstreamProvider, group *model.Up
 	}
 	view := &UpstreamProviderGroupView{
 		ID: group.Id, RemoteGroupID: group.RemoteGroupID, Name: group.Name, Description: group.Description,
+		Platform: group.Platform, Models: unmarshalUpstreamGroupModels(group.Models), SuccessRate: group.SuccessRate, RequestCount: group.RequestCount,
 		EffectiveRateMultiplier: group.EffectiveRateMultiplier, IsDynamic: group.IsDynamic,
 		ChannelCount: channelCount, LastSyncedAt: group.SyncedAt.Unix(),
 	}
@@ -960,6 +1018,30 @@ func upstreamProviderGroupView(provider *model.UpstreamProvider, group *model.Up
 		}
 	}
 	return view, nil
+}
+
+func marshalUpstreamGroupModels(models []string) string {
+	if len(models) == 0 {
+		return ""
+	}
+	encoded, err := common.Marshal(models)
+	if err != nil {
+		common.SysError("failed to marshal upstream group models: " + err.Error())
+		return ""
+	}
+	return string(encoded)
+}
+
+func unmarshalUpstreamGroupModels(encoded string) []string {
+	if strings.TrimSpace(encoded) == "" {
+		return nil
+	}
+	var models []string
+	if err := common.Unmarshal([]byte(encoded), &models); err != nil {
+		common.SysError("failed to unmarshal upstream group models: " + err.Error())
+		return nil
+	}
+	return models
 }
 
 func managedUpstreamChannelCount(providerID int, remoteGroupID string) (int64, error) {
@@ -1035,7 +1117,7 @@ func createManagedUpstreamChannel(
 		return nil, errors.New("upstream group cost rate is invalid")
 	}
 	channelType := constant.ChannelTypeSub2API
-	if provider.Type == model.UpstreamProviderTypeCodeGo {
+	if provider.Type == model.UpstreamProviderTypeCodeGo || provider.Type == model.UpstreamProviderTypeNewAPI {
 		channelType = constant.ChannelTypeNewAPI
 	}
 	baseURL := provider.BaseURL

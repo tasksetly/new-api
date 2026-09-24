@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-export type UpstreamProviderType = 'sub2api' | 'codego'
+export type UpstreamProviderType = 'sub2api' | 'codego' | 'newapi'
 
 export type ApiResponse<T = undefined> = {
   success: boolean
@@ -67,8 +67,12 @@ export type UpstreamProviderGroup = {
   remote_group_id: string
   name: string
   description?: string | null
+  platform?: string | null
+  models?: string[] | null
   rate_multiplier?: number | null
   effective_rate_multiplier?: number | null
+  success_rate?: number | null
+  request_count: number
   is_dynamic: boolean
   corrected_rate?: number | null
   channel_count: number

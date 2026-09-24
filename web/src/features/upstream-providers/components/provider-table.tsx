@@ -49,7 +49,9 @@ type ProviderTableProps = {
 }
 
 function getProviderTypeLabel(type: UpstreamProvider['type']) {
-  return type === 'codego' ? 'CodeGo-Api' : 'Sub2API'
+  if (type === 'codego') return 'CodeGo-Api'
+  if (type === 'newapi') return 'NewAPI'
+  return 'Sub2API'
 }
 
 export function ProviderTable(props: ProviderTableProps) {

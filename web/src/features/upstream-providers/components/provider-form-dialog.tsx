@@ -71,6 +71,7 @@ const PROVIDER_FORM_ID = 'upstream-provider-form'
 const providerTypes: { value: UpstreamProviderType; label: string }[] = [
   { value: 'sub2api', label: 'Sub2API' },
   { value: 'codego', label: 'CodeGo-Api' },
+  { value: 'newapi', label: 'NewAPI' },
 ]
 
 export function ProviderFormDialog(props: ProviderFormDialogProps) {
@@ -100,6 +101,9 @@ export function ProviderFormDialog(props: ProviderFormDialogProps) {
       sync_enabled: true,
     },
   })
+
+  const isNewAPI = form.watch('type') === 'newapi'
+  const isCodeGo = form.watch('type') === 'codego'
 
   useEffect(() => {
     if (!props.open) return
@@ -172,6 +176,20 @@ export function ProviderFormDialog(props: ProviderFormDialogProps) {
   let submitLabel = t('Create Upstream Provider')
   if (isEditing) submitLabel = t('Save Changes')
   if (saveProvider.isPending) submitLabel = t('Saving...')
+  let tokenDescription = t(
+    'Use this when the upstream accepts a management token.'
+  )
+  if (isEditing) {
+    tokenDescription = t('Leave empty to keep the saved access token.')
+  }
+  if (isNewAPI) {
+    tokenDescription = t(
+      'Use a NewAPI management access token. Expired tokens must be replaced manually.'
+    )
+  }
+  if (isCodeGo && isEditing) {
+    tokenDescription = t('Leave empty to keep the saved access token.')
+  }
 
   return (
     <Dialog
@@ -238,7 +256,11 @@ export function ProviderFormDialog(props: ProviderFormDialogProps) {
                     items={providerTypes}
                     value={field.value}
                     onValueChange={(value) => {
-                      if (value === 'sub2api' || value === 'codego') {
+                      if (
+                        value === 'sub2api' ||
+                        value === 'codego' ||
+                        value === 'newapi'
+                      ) {
                         field.onChange(value)
                       }
                     }}
@@ -289,81 +311,87 @@ export function ProviderFormDialog(props: ProviderFormDialogProps) {
           />
 
           <div className='grid gap-4 sm:grid-cols-2'>
-            <FormField
-              control={form.control}
-              name='username'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Username')}</FormLabel>
-                  <FormControl>
-                    <Input autoComplete='username' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='password'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Password')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='password'
-                      autoComplete='new-password'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {isEditing
-                      ? t('Leave empty to keep the saved password.')
-                      : t('Required when the upstream uses password sign-in.')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isNewAPI && (
+              <FormField
+                control={form.control}
+                name='username'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Username')}</FormLabel>
+                    <FormControl>
+                      <Input autoComplete='username' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            {!isNewAPI && (
+              <FormField
+                control={form.control}
+                name='password'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Password')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='password'
+                        autoComplete='new-password'
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {isEditing
+                        ? t('Leave empty to keep the saved password.')
+                        : t('Required when the upstream uses password sign-in.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <FormField
-              control={form.control}
-              name='refresh_token'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Refresh Token')}</FormLabel>
-                  <FormControl>
-                    <Input type='password' autoComplete='off' {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    {isEditing
-                      ? t('Leave empty to keep the saved refresh token.')
-                      : t('Optional token used to renew a Sub2API session.')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='totp_secret'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('TOTP Secret')}</FormLabel>
-                  <FormControl>
-                    <Input type='password' autoComplete='off' {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    {isEditing
-                      ? t('Leave empty to keep the saved TOTP secret.')
-                      : t('Optional secret for upstream two-factor sign-in.')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {!isNewAPI && (
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='refresh_token'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Refresh Token')}</FormLabel>
+                    <FormControl>
+                      <Input type='password' autoComplete='off' {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {isEditing
+                        ? t('Leave empty to keep the saved refresh token.')
+                        : t('Optional token used to renew a Sub2API session.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='totp_secret'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('TOTP Secret')}</FormLabel>
+                    <FormControl>
+                      <Input type='password' autoComplete='off' {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {isEditing
+                        ? t('Leave empty to keep the saved TOTP secret.')
+                        : t('Optional secret for upstream two-factor sign-in.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <FormField
@@ -375,33 +403,31 @@ export function ProviderFormDialog(props: ProviderFormDialogProps) {
                   <FormControl>
                     <Input type='password' autoComplete='off' {...field} />
                   </FormControl>
-                  <FormDescription>
-                    {isEditing
-                      ? t('Leave empty to keep the saved access token.')
-                      : t(
-                          'Use this when the upstream accepts a management token.'
-                        )}
-                  </FormDescription>
+                  <FormDescription>{tokenDescription}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name='upstream_user_id'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Upstream User ID')}</FormLabel>
-                  <FormControl>
-                    <Input autoComplete='off' {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    {t('Required by CodeGo-Api when using an access token.')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isNewAPI && (
+              <FormField
+                control={form.control}
+                name='upstream_user_id'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Upstream User ID')}</FormLabel>
+                    <FormControl>
+                      <Input autoComplete='off' {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {isCodeGo
+                        ? t('Required by CodeGo-Api when using an access token.')
+                        : t('Required by the upstream when using an access token.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
 
           <div className='grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end'>

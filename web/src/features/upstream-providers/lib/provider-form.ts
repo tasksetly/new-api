@@ -26,7 +26,7 @@ export function getUpstreamProviderFormSchema(
   return z
     .object({
       name: z.string().trim().min(1, t('Provider name is required')),
-      type: z.enum(['sub2api', 'codego']),
+      type: z.enum(['sub2api', 'codego', 'newapi']),
       base_url: z.string().trim().url(t('Enter a valid upstream URL')),
       username: z.string().trim(),
       password: z.string(),
@@ -43,6 +43,7 @@ export function getUpstreamProviderFormSchema(
     .superRefine((values, context) => {
       if (
         !isEditing &&
+        values.type !== 'newapi' &&
         !values.token &&
         !(values.type === 'sub2api' && values.refresh_token) &&
         (!values.username || !values.password)
@@ -53,11 +54,17 @@ export function getUpstreamProviderFormSchema(
           message: t('Enter credentials or an access token'),
         })
       }
+      if (!isEditing && values.type === 'newapi' && !values.token) {
+        context.addIssue({
+          code: 'custom',
+          path: ['token'],
+          message: t('Enter a NewAPI management access token'),
+        })
+      }
       if (
         !isEditing &&
         values.type === 'codego' &&
         values.token &&
-        !values.password &&
         !values.upstream_user_id
       ) {
         context.addIssue({

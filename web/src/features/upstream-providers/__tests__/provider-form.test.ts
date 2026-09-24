@@ -55,6 +55,60 @@ describe('upstream provider form', () => {
     }
   })
 
+  it('requires a NewAPI management token when creating a NewAPI provider', () => {
+    const result = getUpstreamProviderFormSchema(translate, false).safeParse({
+      ...validValues,
+      type: 'newapi',
+      username: '',
+      password: '',
+      token: '',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ['token'],
+          message: 'Enter a NewAPI management access token',
+        })
+      )
+    }
+  })
+
+  it('does not require a remote user ID for a NewAPI token', () => {
+    const result = getUpstreamProviderFormSchema(translate, false).safeParse({
+      ...validValues,
+      type: 'newapi',
+      username: '',
+      password: '',
+      token: 'management-token',
+      upstream_user_id: '',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('requires a remote user ID for a CodeGo-Api management token', () => {
+    const result = getUpstreamProviderFormSchema(translate, false).safeParse({
+      ...validValues,
+      type: 'codego',
+      username: '',
+      password: '',
+      token: 'management-token',
+      upstream_user_id: '',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ['upstream_user_id'],
+          message: 'Enter the CodeGo-Api user ID for an access token',
+        })
+      )
+    }
+  })
+
   it('allows blank credentials when editing so saved secrets are retained', () => {
     const result = getUpstreamProviderFormSchema(translate, true).safeParse({
       ...validValues,

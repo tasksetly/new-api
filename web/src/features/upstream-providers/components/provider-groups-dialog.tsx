@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -56,6 +56,10 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
   const [selectedGroupIDs, setSelectedGroupIDs] = useState<string[]>([])
   const [localGroup, setLocalGroup] = useState('default')
   const [namePrefix, setNamePrefix] = useState('')
+  const [groupFilter, setGroupFilter] = useState('')
+  const [platformFilter, setPlatformFilter] = useState('all')
+  const [modelFilter, setModelFilter] = useState('all')
+  const [rateSort, setRateSort] = useState<'none' | 'desc' | 'asc'>('none')
   const providerID = props.provider?.id
 
   const providerGroupsQuery = useQuery({
@@ -82,6 +86,10 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
     setSelectedGroupIDs([])
     setLocalGroup('default')
     setNamePrefix('')
+    setGroupFilter('')
+    setPlatformFilter('all')
+    setModelFilter('all')
+    setRateSort('none')
   }, [props.open, providerID])
 
   const provisionGroups = useMutation({
@@ -124,6 +132,62 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
   })
 
   const groups = providerGroupsQuery.data?.items ?? []
+  const platforms = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          groups.flatMap((group) =>
+            (group.platform ?? '')
+              .split(',')
+              .map((platform) => platform.trim())
+              .filter(Boolean)
+          )
+        )
+      ).sort(),
+    [groups]
+  )
+  const models = useMemo(
+    () =>
+      Array.from(
+        new Set(groups.flatMap((group) => group.models ?? []))
+      ).sort(),
+    [groups]
+  )
+  const filteredGroups = useMemo(() => {
+    const keyword = groupFilter.trim().toLowerCase()
+    const filtered = groups.filter((group) => {
+      const searchable = [
+        group.remote_group_id,
+        group.name,
+        group.description ?? '',
+        group.platform ?? '',
+        ...(group.models ?? []),
+      ]
+        .join(' ')
+        .toLowerCase()
+      const platformMatches =
+        platformFilter === 'all' ||
+        (group.platform ?? '')
+          .split(',')
+          .map((platform) => platform.trim())
+          .includes(platformFilter)
+      const modelMatches =
+        modelFilter === 'all' || (group.models ?? []).includes(modelFilter)
+      return (
+        (!keyword || searchable.includes(keyword)) &&
+        platformMatches &&
+        modelMatches
+      )
+    })
+    if (rateSort === 'none') return filtered
+    return [...filtered].sort((left, right) => {
+      const leftRate =
+        left.effective_rate_multiplier ?? left.rate_multiplier ?? -Infinity
+      const rightRate =
+        right.effective_rate_multiplier ?? right.rate_multiplier ?? -Infinity
+      return rateSort === 'desc' ? rightRate - leftRate : leftRate - rightRate
+    })
+  }, [groupFilter, groups, modelFilter, platformFilter, rateSort])
   const localGroups = localGroupsQuery.data ?? []
   const selectedLocalGroup = localGroups.includes(localGroup)
     ? localGroup
@@ -142,6 +206,10 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
 
   const renderRate = (value: number | null | undefined) =>
     value == null ? '-' : `${formatNumber(value)}×`
+  const renderSuccessRate = (group: UpstreamProviderGroup) =>
+    group.success_rate == null
+      ? '-'
+      : `${formatNumber(group.success_rate)}% (${formatNumber(group.request_count)})`
 
   let groupsContent: ReactNode
   if (providerGroupsQuery.isLoading) {
@@ -162,9 +230,13 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
   } else {
     groupsContent = (
       <StaticDataTable<UpstreamProviderGroup>
-        data={groups}
+        data={filteredGroups}
         getRowKey={(group) => group.remote_group_id}
-        emptyContent={t('No synchronized upstream groups found.')}
+        emptyContent={
+          groups.length === 0
+            ? t('No synchronized upstream groups found.')
+            : t('No groups match the current filters')
+        }
         emptyClassName='text-sm'
         columns={[
           {
@@ -195,6 +267,21 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
             cell: (group) => group.description || '-',
           },
           {
+            id: 'platform',
+            header: t('Platform'),
+            cellClassName: 'max-w-40',
+            cell: (group) => group.platform || '-',
+          },
+          {
+            id: 'models',
+            header: t('Models'),
+            cellClassName: 'max-w-56',
+            cell: (group) =>
+              group.models && group.models.length > 0
+                ? group.models.join(', ')
+                : '-',
+          },
+          {
             id: 'base-rate',
             header: t('Base Rate'),
             cell: (group) => renderRate(group.rate_multiplier),
@@ -211,6 +298,11 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
               group.is_dynamic
                 ? t('Dynamic')
                 : renderRate(group.corrected_rate),
+          },
+          {
+            id: 'success-rate',
+            header: t('Success Rate'),
+            cell: renderSuccessRate,
           },
           {
             id: 'channels',
@@ -319,6 +411,86 @@ export function ProviderGroupsDialog(props: ProviderGroupsDialogProps) {
             'Estimated upstream cost uses local consume logs and the latest synchronized group multiplier.'
           )}
         </p>
+
+        <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+          <Input
+            value={groupFilter}
+            onChange={(event) => setGroupFilter(event.target.value)}
+            placeholder={t('Filter...')}
+            aria-label={t('Filter groups')}
+          />
+          <Select
+            items={[
+              { value: 'all', label: t('All platforms') },
+              ...platforms.map((platform) => ({
+                value: platform,
+                label: platform,
+              })),
+            ]}
+            value={platformFilter}
+            onValueChange={(value) => value && setPlatformFilter(value)}
+          >
+            <SelectTrigger className='w-full'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                <SelectItem value='all'>{t('All platforms')}</SelectItem>
+                {platforms.map((platform) => (
+                  <SelectItem key={platform} value={platform}>
+                    {platform}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            items={[
+              { value: 'all', label: t('All models') },
+              ...models.map((model) => ({ value: model, label: model })),
+            ]}
+            value={modelFilter}
+            onValueChange={(value) => value && setModelFilter(value)}
+          >
+            <SelectTrigger className='w-full'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                <SelectItem value='all'>{t('All models')}</SelectItem>
+                {models.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select
+            items={[
+              { value: 'none', label: t('Default order') },
+              { value: 'desc', label: t('Rate high to low') },
+              { value: 'asc', label: t('Rate low to high') },
+            ]}
+            value={rateSort}
+            onValueChange={(value) => {
+              if (value === 'none' || value === 'desc' || value === 'asc') {
+                setRateSort(value)
+              }
+            }}
+          >
+            <SelectTrigger className='w-full'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                <SelectItem value='none'>{t('Default order')}</SelectItem>
+                <SelectItem value='desc'>{t('Rate high to low')}</SelectItem>
+                <SelectItem value='asc'>{t('Rate low to high')}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
         {groupsContent}
       </div>

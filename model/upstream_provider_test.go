@@ -9,6 +9,16 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestNormalizeUpstreamProviderNormalizesType(t *testing.T) {
+	provider := &UpstreamProvider{
+		Name:           "legacy-provider",
+		Type:           " CODEGO ",
+		BaseURL:        "https://upstream.example",
+		RateCorrection: 1,
+	}
+	require.NoError(t, normalizeUpstreamProvider(provider))
+	assert.Equal(t, UpstreamProviderTypeCodeGo, provider.Type)
+}
 func TestReplaceUpstreamGroupsAndDeleteProviderUnbindsChannels(t *testing.T) {
 	truncateTables(t)
 	require.NoError(t, DB.Exec("DELETE FROM upstream_groups").Error)
@@ -17,7 +27,7 @@ func TestReplaceUpstreamGroupsAndDeleteProviderUnbindsChannels(t *testing.T) {
 
 	provider := &UpstreamProvider{
 		Name:           "upstream-provider-model-test",
-		Type:           UpstreamProviderTypeCodeGo,
+		Type:           UpstreamProviderTypeNewAPI,
 		BaseURL:        "https://upstream.example",
 		RateCorrection: 1,
 	}

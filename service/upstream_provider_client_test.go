@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -46,7 +47,7 @@ func disableUpstreamProviderClientTestSSRFProtection(t *testing.T) {
 	fetchSetting.EnableSSRFProtection = false
 }
 
-func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
+func TestNewAPIUpstreamClientUsesManualManagementToken(t *testing.T) {
 	disableUpstreamProviderClientTestSSRFProtection(t)
 
 	var requestMutex sync.Mutex
@@ -69,14 +70,8 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 
 		writer.Header().Set("Content-Type", "application/json")
 		switch request.Method + " " + request.URL.Path {
-		case http.MethodPost + " /api/user/login":
-			writer.Header().Set("Set-Cookie", "session=login-cookie; Path=/; HttpOnly")
-			_, _ = writer.Write([]byte(`{"success":true,"data":{"id":42,"username":"codego-user"}}`))
-		case http.MethodGet + " /api/user/token":
-			// CodeGo returns the access token itself in data, rather than an object.
-			_, _ = writer.Write([]byte(`{"success":true,"data":"management-token"}`))
 		case http.MethodGet + " /api/user/self":
-			_, _ = writer.Write([]byte(`{"success":true,"data":{"id":42,"username":"codego-user","quota":2500000}}`))
+			_, _ = writer.Write([]byte(`{"success":true,"data":{"id":42,"username":"newapi-user","quota":2500000}}`))
 		case http.MethodGet + " /api/status":
 			_, _ = writer.Write([]byte(`{"success":true,"data":{"quota_per_unit":500000}}`))
 		case http.MethodGet + " /api/user/self/groups":
@@ -88,7 +83,7 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 		case http.MethodGet + " /api/token/search":
 			_, _ = writer.Write([]byte(`{"success":true,"data":{"items":[{"id":7,"name":"local-channel"}]}}`))
 		case http.MethodPost + " /api/token/7/key":
-			_, _ = writer.Write([]byte(`{"success":true,"data":{"key":"sk-codego-created"}}`))
+			_, _ = writer.Write([]byte(`{"success":true,"data":{"key":"sk-newapi-created"}}`))
 		case http.MethodDelete + " /api/token/7":
 			_, _ = writer.Write([]byte(`{"success":true,"data":true}`))
 		case http.MethodGet + " /v1/models":
@@ -99,21 +94,17 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	client, err := newCodeGoUpstreamClient(server.URL)
+	client, err := newNewAPIUpstreamClient(server.URL)
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	session, err := client.Login(ctx, upstreamProviderCredentials{Username: "operator", Password: "password"})
-	require.NoError(t, err)
-	require.NotNil(t, session)
-	assert.Equal(t, "management-token", session.Token)
-	assert.Equal(t, "42", session.RemoteUserID)
+	session := &upstreamProviderRemoteSession{Token: "  Bearer management-token  "}
 
 	profile, err := client.Profile(ctx, *session)
 	require.NoError(t, err)
 	require.NotNil(t, profile)
 	assert.Equal(t, "42", profile.RemoteUserID)
-	assert.Equal(t, "codego-user", profile.Username)
+	assert.Equal(t, "newapi-user", profile.Username)
 	require.NotNil(t, profile.Balance)
 	assert.Equal(t, 5.0, *profile.Balance)
 
@@ -141,7 +132,7 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, remoteKey)
 	assert.Equal(t, "7", remoteKey.ID)
-	assert.Equal(t, "sk-codego-created", remoteKey.Key)
+	assert.Equal(t, "sk-newapi-created", remoteKey.Key)
 	assert.Equal(t, "vip", remoteKey.GroupID)
 
 	models, err := client.Models(ctx, remoteKey.Key)
@@ -154,16 +145,7 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 	requestMutex.Unlock()
 	require.Len(t, recordedRequests, 12)
 
-	loginRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, http.MethodPost, "/api/user/login")
-	var loginPayload map[string]string
-	require.NoError(t, common.Unmarshal(loginRequest.Body, &loginPayload))
-	assert.Equal(t, map[string]string{"username": "operator", "password": "password"}, loginPayload)
-
-	tokenRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, http.MethodGet, "/api/user/token")
-	assert.Contains(t, tokenRequest.Header.Get("Cookie"), "session=login-cookie")
-	assert.Equal(t, "42", tokenRequest.Header.Get("CodeGo-Api-User"))
-
-	for _, path := range []string{"/api/user/self", "/api/user/self/groups", "/api/log/self/stat", "/api/token/", "/api/token/search", "/api/token/7/key", "/api/token/7"} {
+	for _, path := range []string{"/api/user/self", "/api/user/self/groups", "/api/log/self/stat", "/api/status", "/api/token/", "/api/token/search", "/api/token/7/key", "/api/token/7"} {
 		method := http.MethodGet
 		if path == "/api/token/" || path == "/api/token/7/key" {
 			method = http.MethodPost
@@ -172,7 +154,7 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 		}
 		recordedRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, method, path)
 		assert.Equal(t, "Bearer management-token", recordedRequest.Header.Get("Authorization"))
-		assert.Equal(t, "42", recordedRequest.Header.Get("CodeGo-Api-User"))
+		assert.Empty(t, recordedRequest.Header.Get("CodeGo-Api-User"))
 	}
 
 	createRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, http.MethodPost, "/api/token/")
@@ -189,10 +171,106 @@ func TestCodeGoUpstreamClientUsesUserManagementProtocol(t *testing.T) {
 	assert.Equal(t, "100", searchRequest.Query.Get("size"))
 
 	modelRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, http.MethodGet, "/v1/models")
-	assert.Equal(t, "Bearer sk-codego-created", modelRequest.Header.Get("Authorization"))
+	assert.Equal(t, "Bearer sk-newapi-created", modelRequest.Header.Get("Authorization"))
 	usageRequest := findUpstreamProviderClientTestRequest(t, recordedRequests, http.MethodGet, "/api/log/self/stat")
 	assert.NotEmpty(t, usageRequest.Query.Get("start_timestamp"))
 	assert.NotEmpty(t, usageRequest.Query.Get("end_timestamp"))
+}
+
+func TestNormalizeUpstreamBearerToken(t *testing.T) {
+	assert.Equal(t, "management-token", normalizeUpstreamBearerToken("management-token"))
+	assert.Equal(t, "management-token", normalizeUpstreamBearerToken("  bearer management-token  "))
+	assert.Empty(t, normalizeUpstreamBearerToken("Bearer management-token extra"))
+	assert.Empty(t, normalizeUpstreamBearerToken("  "))
+}
+
+func TestNewAPIUpstreamClientCleansUpTokenWhenDiscoveryFails(t *testing.T) {
+	disableUpstreamProviderClientTestSSRFProtection(t)
+	var deleteCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.Method + " " + request.URL.Path {
+		case http.MethodPost + " /api/token/":
+			_, _ = writer.Write([]byte(`{"success":true,"data":{"id":8}}`))
+		case http.MethodGet + " /api/token/search":
+			_, _ = writer.Write([]byte(`{"success":false,"message":"temporary failure"}`))
+		case http.MethodDelete + " /api/token/8":
+			deleteCount.Add(1)
+			_, _ = writer.Write([]byte(`{"success":true,"data":true}`))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := newNewAPIUpstreamClient(server.URL)
+	require.NoError(t, err)
+	_, err = client.CreateKey(context.Background(), upstreamProviderRemoteSession{Token: "management-token"}, "provisioned", "vip")
+	require.Error(t, err)
+	assert.Equal(t, int32(1), deleteCount.Load())
+}
+
+func TestNewAPIUpstreamClientDoesNotLoginOrRefresh(t *testing.T) {
+	disableUpstreamProviderClientTestSSRFProtection(t)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		t.Fatalf("unexpected request: %s %s", request.Method, request.URL.Path)
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := newNewAPIUpstreamClient(server.URL)
+	require.NoError(t, err)
+	_, err = client.Login(context.Background(), upstreamProviderCredentials{Username: "user", Password: "password"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "manually supplied")
+	_, err = client.Refresh(context.Background(), upstreamProviderCredentials{Token: "expired"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "replaced manually")
+}
+
+func TestCodeGoManagementHeadersRequireRemoteUserID(t *testing.T) {
+	client := &codeGoUpstreamClient{}
+	headers, err := client.managementHeaders(upstreamProviderRemoteSession{
+		Token:        "Bearer management-token",
+		RemoteUserID: "42",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "Bearer management-token", headers.Get("Authorization"))
+	assert.Equal(t, "42", headers.Get("CodeGo-Api-User"))
+	assert.Equal(t, "42", headers.Get("New-Api-User"))
+
+	_, err = client.managementHeaders(upstreamProviderRemoteSession{Token: "management-token"})
+	assert.Error(t, err)
+}
+
+func TestCodeGoGroupsIncludeModelsPlatformsAndSuccessRate(t *testing.T) {
+	disableUpstreamProviderClientTestSSRFProtection(t)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/api/user/self/groups":
+			assert.Equal(t, "Bearer management-token", request.Header.Get("Authorization"))
+			assert.Equal(t, "42", request.Header.Get("New-Api-User"))
+			_, _ = writer.Write([]byte(`{"success":true,"data":{"vip":{"ratio":0.5,"desc":"VIP"}}}`))
+		case "/api/user/self/group-status":
+			_, _ = writer.Write([]byte(`{"success":true,"data":[{"group":"vip","request_count":10,"models":[{"model":"gpt-4o","success_rate":90,"request_count":10}]}]}`))
+		case "/api/pricing":
+			_, _ = writer.Write([]byte(`{"success":true,"data":[{"model_name":"gpt-4o","owner_by":"openai","enable_groups":["vip"]}]}`))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := newCodeGoUpstreamClient(server.URL)
+	require.NoError(t, err)
+	groups, err := client.Groups(context.Background(), upstreamProviderRemoteSession{Token: "management-token", RemoteUserID: "42"})
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+	assert.Equal(t, "openai", groups[0].Platform)
+	assert.Equal(t, []string{"gpt-4o"}, groups[0].Models)
+	assert.Equal(t, int64(10), groups[0].RequestCount)
+	require.NotNil(t, groups[0].SuccessRate)
+	assert.Equal(t, 90.0, *groups[0].SuccessRate)
 }
 
 func TestSub2APIUpstreamClientUsesUserManagementProtocol(t *testing.T) {
@@ -339,7 +417,7 @@ func TestUpdateManagedUpstreamProviderRefreshesBoundChannelCostsAndGuardsProtoco
 	require.NoError(t, err)
 	provider := &model.UpstreamProvider{
 		Name:           "upstream-provider-service-test",
-		Type:           model.UpstreamProviderTypeCodeGo,
+		Type:           model.UpstreamProviderTypeNewAPI,
 		BaseURL:        "https://upstream.example",
 		TokenEncrypted: token,
 		UpstreamUserID: "42",
@@ -380,7 +458,7 @@ func TestUpdateManagedUpstreamProviderRefreshesBoundChannelCostsAndGuardsProtoco
 
 	var storedProvider model.UpstreamProvider
 	require.NoError(t, model.DB.First(&storedProvider, provider.Id).Error)
-	assert.Equal(t, model.UpstreamProviderTypeCodeGo, storedProvider.Type)
+	assert.Equal(t, model.UpstreamProviderTypeNewAPI, storedProvider.Type)
 
 	staleProvider := storedProvider
 	newToken := "new-management-token"
@@ -551,6 +629,19 @@ func TestUpstreamProviderClientBlocksCrossOriginRedirects(t *testing.T) {
 	}, nil)
 	require.Error(t, err)
 	assert.Zero(t, destinationRequests.Load())
+}
+func TestNewAPIManualTokenErrorsAreActionable(t *testing.T) {
+	assert.Equal(t, "upstream management access token expired or was rejected; replace it manually", PublicManagedUpstreamError(errUpstreamProviderManualToken))
+	assert.Equal(t, "upstream management access token is missing", PublicManagedUpstreamError(errors.New("NewAPI management access token is missing")))
+}
+
+func TestUpstreamProviderResponseMessagesClassifyNewAPIAuthorizationFailures(t *testing.T) {
+	for _, message := range []string{"无权访问", "权限不足", "access denied", "forbidden"} {
+		t.Run(message, func(t *testing.T) {
+			err := upstreamProviderResponseError(message)
+			require.ErrorIs(t, err, errUpstreamProviderUnauthorized)
+		})
+	}
 }
 
 func TestUpstreamProviderResponseMessagesDoNotExposeRemoteBody(t *testing.T) {

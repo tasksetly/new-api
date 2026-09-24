@@ -14,11 +14,12 @@ import (
 const (
 	UpstreamProviderTypeSub2API = "sub2api"
 	UpstreamProviderTypeCodeGo  = "codego"
+	UpstreamProviderTypeNewAPI  = "newapi"
 )
 
 var ErrUpstreamProviderConfigurationChanged = errors.New("upstream provider configuration changed")
 
-// UpstreamProvider stores a remote CodeGo or sub2api account. Credential
+// UpstreamProvider stores a remote CodeGo-Api, NewAPI, or Sub2API account. Credential
 // fields deliberately have no JSON representation, so management responses
 // cannot disclose reusable upstream credentials.
 type UpstreamProvider struct {
@@ -57,16 +58,20 @@ func (UpstreamProvider) TableName() string {
 }
 
 // UpstreamGroup is a provider-owned remote group and its effective upstream
-// rate. Remote group identifiers are strings because CodeGo group names are
-// identifiers while sub2api uses numeric identifiers.
+// rate. Remote group identifiers are strings because CodeGo-Api and NewAPI group names are
+// identifiers while Sub2API uses numeric identifiers.
 type UpstreamGroup struct {
 	Id                      int       `json:"id"`
 	UpstreamProviderID      int       `json:"upstream_provider_id" gorm:"not null;index;uniqueIndex:idx_upstream_group_provider_remote,priority:1"`
 	RemoteGroupID           string    `json:"remote_group_id" gorm:"type:varchar(128);not null;uniqueIndex:idx_upstream_group_provider_remote,priority:2"`
 	Name                    string    `json:"name" gorm:"type:varchar(128);not null"`
 	Description             string    `json:"description,omitempty" gorm:"type:text"`
+	Platform                string    `json:"platform,omitempty" gorm:"type:varchar(128)"`
+	Models                  string    `json:"models,omitempty" gorm:"type:text"`
 	RateMultiplier          float64   `json:"rate_multiplier"`
 	EffectiveRateMultiplier *float64  `json:"effective_rate_multiplier,omitempty"`
+	SuccessRate             *float64  `json:"success_rate,omitempty"`
+	RequestCount            int64     `json:"request_count"`
 	IsDynamic               bool      `json:"is_dynamic"`
 	SyncedAt                time.Time `json:"synced_at"`
 	CreatedAt               time.Time `json:"created_at"`
@@ -325,7 +330,7 @@ func DeleteUpstreamProvider(id int) error {
 
 func normalizeUpstreamProvider(provider *UpstreamProvider) error {
 	provider.Name = strings.TrimSpace(provider.Name)
-	provider.Type = strings.TrimSpace(provider.Type)
+	provider.Type = strings.ToLower(strings.TrimSpace(provider.Type))
 	provider.BaseURL = strings.TrimSpace(provider.BaseURL)
 	provider.Username = strings.TrimSpace(provider.Username)
 	provider.UpstreamUserID = strings.TrimSpace(provider.UpstreamUserID)
