@@ -32,7 +32,11 @@ import dayjs from '@/lib/dayjs'
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 
 import type { UsageLog } from '../data/schema'
-import { formatModelName, parseLogOther } from '../lib/format'
+import {
+  formatModelName,
+  getReasoningEffortVariant,
+  parseLogOther,
+} from '../lib/format'
 import {
   getLogTypeConfig,
   isDisplayableLogType,
@@ -49,6 +53,7 @@ type FieldName =
   | 'channel'
   | 'token'
   | 'group'
+  | 'reasoning'
   | 'time'
 type LogField = {
   label: string
@@ -116,13 +121,27 @@ export function CommonLogMobileCard<TData>(props: {
       visible: displayable && props.cells.has('token_name') && !!group,
       sensitive: true,
     },
+    reasoning: {
+      label: t('Reasoning Effort'),
+      value: other?.reasoning_effort ?? '',
+      visible:
+        displayable &&
+        props.cells.has('reasoning_effort') &&
+        !!other?.reasoning_effort,
+    },
   }
   const selected = selectedField ? fields[selectedField] : undefined
   const activeField =
     selected?.visible && (!selected.sensitive || context.sensitiveVisible)
       ? selected
       : undefined
-  const metadata: FieldName[] = ['user', 'channel', 'token', 'group']
+  const metadata: FieldName[] = [
+    'user',
+    'channel',
+    'token',
+    'group',
+    'reasoning',
+  ]
   const visibleMetadata = metadata.filter((id) => fields[id].visible)
   const costCell = props.cells.get('quota')
   const contentCell = props.cells.get('content')
@@ -237,6 +256,15 @@ export function CommonLogMobileCard<TData>(props: {
                   className='border-border/60 bg-muted/30 text-foreground max-w-full rounded-md border px-1.5 py-0.5 text-sm'
                 />
               )
+            } else if (id === 'reasoning') {
+              fieldContent = (
+                <StatusBadge
+                  label={field.value}
+                  variant={getReasoningEffortVariant(field.value)}
+                  copyable={false}
+                  className='max-w-full rounded-md px-1.5 py-0.5 text-sm'
+                />
+              )
             }
             return (
               <div key={id} className='flex min-w-0 items-center gap-2'>
@@ -260,7 +288,7 @@ export function CommonLogMobileCard<TData>(props: {
                     field.label
                   )}
                 </span>
-                {context.sensitiveVisible ? (
+                {!field.sensitive || context.sensitiveVisible ? (
                   <Button
                     variant='ghost'
                     aria-label={`${field.label}: ${field.value}`}

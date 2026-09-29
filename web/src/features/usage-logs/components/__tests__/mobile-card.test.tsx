@@ -256,6 +256,21 @@ it('shows mapped model names in full when inspecting a mobile model badge', asyn
   ).toBeVisible()
 })
 
+it('shows the reasoning effort in the mobile summary', () => {
+  renderLogs({
+    logs: [
+      {
+        ...log,
+        other: JSON.stringify({ reasoning_effort: 'high' }),
+      },
+    ],
+  })
+  expect(
+    screen.getByRole('button', { name: 'Reasoning Effort: high' })
+  ).toBeVisible()
+  expect(screen.getByText('high')).toBeVisible()
+})
+
 it('shows loading placeholders without displaying stale log fields', () => {
   renderLogs({ loading: true })
   expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute(

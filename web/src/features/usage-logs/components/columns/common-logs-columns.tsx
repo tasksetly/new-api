@@ -58,6 +58,7 @@ import {
   getTieredBillingSummary,
   hasAnyCacheTokens,
   parseLogOther,
+  getReasoningEffortVariant,
   isViolationFeeLog,
   renderAuditContent,
 } from '../../lib/format'
@@ -665,6 +666,30 @@ export function useCommonLogsColumns(
         )
       },
       meta: { mobileTitle: true },
+    },
+    {
+      id: 'reasoning_effort',
+      header: t('Reasoning Effort'),
+      accessorFn: (row) => parseLogOther(row.other)?.reasoning_effort ?? '',
+      cell: ({ row }) => {
+        const log = row.original
+        if (!isDisplayableLogType(log.type)) return null
+
+        const effort = parseLogOther(log.other)?.reasoning_effort
+        if (!effort) {
+          return <span className='text-muted-foreground text-xs'>-</span>
+        }
+
+        return (
+          <StatusBadge
+            label={effort}
+            variant={getReasoningEffortVariant(effort)}
+            size='sm'
+            copyable={false}
+          />
+        )
+      },
+      meta: { label: t('Reasoning Effort') },
     },
     {
       accessorKey: 'is_stream',
