@@ -62,6 +62,15 @@ export async function requestPaymentAmount(
   paymentType: string,
   calculators: PaymentAmountCalculators = defaultPaymentAmountCalculators
 ): Promise<number> {
+  return (await requestPaymentQuote(topupAmount, paymentType, calculators))
+    .amount
+}
+
+async function requestPaymentQuote(
+  topupAmount: number,
+  paymentType: string,
+  calculators: PaymentAmountCalculators
+): Promise<{ amount: number; feeAmount: number }> {
   let calculator = calculators.regular
   if (isStripePayment(paymentType)) {
     calculator = calculators.stripe
@@ -73,14 +82,18 @@ export async function requestPaymentAmount(
 
   const response = await calculator({ amount: topupAmount })
   if (!isApiSuccess(response) || !response.data) {
-    return 0
+    return { amount: 0, feeAmount: 0 }
   }
 
-  return Number.parseFloat(response.data)
+  return {
+    amount: Number.parseFloat(response.data),
+    feeAmount: Number.parseFloat(response.fee_amount ?? '0'),
+  }
 }
 
 export function usePayment() {
   const [amount, setAmount] = useState<number>(0)
+  const [feeAmount, setFeeAmount] = useState<number>(0)
   const [calculating, setCalculating] = useState(false)
   const [processing, setProcessing] = useState(false)
 
@@ -89,14 +102,17 @@ export function usePayment() {
     async (topupAmount: number, paymentType: string) => {
       try {
         setCalculating(true)
-        const calculatedAmount = await requestPaymentAmount(
+        const quote = await requestPaymentQuote(
           topupAmount,
-          paymentType
+          paymentType,
+          defaultPaymentAmountCalculators
         )
-        setAmount(calculatedAmount)
-        return calculatedAmount
+        setAmount(quote.amount)
+        setFeeAmount(quote.feeAmount)
+        return quote.amount
       } catch {
         setAmount(0)
+        setFeeAmount(0)
         return 0
       } finally {
         setCalculating(false)
@@ -159,6 +175,7 @@ export function usePayment() {
 
   return {
     amount,
+    feeAmount,
     calculating,
     processing,
     calculatePaymentAmount,

@@ -26,6 +26,7 @@ tiktoken_cache
 .plans
 .claude
 .cursor
+.mcp.json
 
 electron/node_modules
 electron/dist
@@ -44,3 +45,7 @@ relaykit/relayconvert/chat_responses_live_local_test.go
 service/openaicompat/chat_responses_live_local_test.go
 go.work
 go.work.sum
+
+# AOCI agent host integration (machine-bound; do not commit)
+.codex/config.toml
+.codex/config.toml.backup.*

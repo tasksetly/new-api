@@ -1,0 +1,491 @@
+#AOCI-CODE-VOLUME: 1
+
+===/home/debian/ai/new-api/===
+.dockerignore[FV5T]: F:控制Docker构建上下文并排除Git、文档和本地构建产物 | R:code:Dockerfile | A:由Docker构建流程读取 | S:虽排除Markdown和docs，仍显式保留THIRD-PARTY-LICENSES.md
+.env.example[FC8S]: F:列出服务端数据库、缓存、任务、超时、代理和会话安全环境变量示例 | R:code:common/env.go,code:common/session_cookie.go,code:common/trusted_proxies.go | A:部署时按需设置环境变量 | S:安全Cookie模式须列全可信HTTPS Origin；TRUSTED_PROXIES=none须单独使用
+.gitattributes[FV4T]: F:统一文本文件LF规则并声明二进制及GitHub语言统计属性 | R:code:web/src/routeTree.gen.ts | A:由Git属性与Linguist读取 | S:web TSX视图不参与语言统计，electron目录标记为vendored
+.gitignore[FV3T]: F:排除本地环境、构建缓存、生成产物与临时探测文件 | R:code:.dockerignore | A:由Git识别不纳入版本管理的路径 | S:忽略机绑定的.codex/config.toml及其备份
+AGENTS.md[XQ9M]: F:规定项目架构、Go/React规范、身份与计费安全、数据库兼容及AOCI作者化边界 | R:code:web/AGENTS.md,code:relaykit/go.mod,code:common/quota_math.go,code:model/main.go | A:代理处理项目任务和维护索引时遵守此合同 | S:保护new-api与QuantumNous身份；认证须服务端执行OWASP控制；数据库行为需真实SQLite/MySQL/PostgreSQL验证；计费使用饱和转换并审计夹值
+CLAUDE.md[XQ6T]: F:约束Claude Code每次任务开始时完整读取仓库AGENTS.md | R:code:AGENTS.md,code:web/AGENTS.md | A:规划或处理项目问题前执行Read | S:不得以@AGENTS导入、历史摘要或部分搜索替代完整读取
+Dockerfile[OV8T]: F:以Bun构建前端、Go编译后端并组装含运行时依赖和法律文件的多阶段镜像 | R:code:go.mod,code:relaykit/go.mod,code:web/package.json,code:Dockerfile.dev | A:CI或Docker发布流程据此构建镜像 | S:下载主模块依赖前必须复制relaykit/go.mod；前端dist会嵌入Go程序
+Dockerfile.dev[OV7T]: F:为前端独立开发构建仅含后端的容器并放置静态占位页满足embed | R:code:Dockerfile,code:relaykit/go.mod,code:web/package.json | A:开发时让前端开发服务器提供界面 | S:占位页仅供开发构建；relaykit/go.mod须先于go mod download复制
+LICENSE[SG9L]: F:声明项目采用GNU Affero General Public License第三版并提供完整许可条款 | R:code:NOTICE,code:THIRD-PARTY-LICENSES.md,code:Dockerfile | A:分发或修改项目时按AGPLv3履行义务 | S:向公众提供修改版网络服务须按AGPLv3提供对应源代码；许可正文不得改写
+NOTICE[SG9S]: F:汇集项目版权、AGPL附加归属条款及直接依赖与Electron组件的法律声明 | R:code:LICENSE,code:THIRD-PARTY-LICENSES.md,code:Dockerfile | A:随镜像、二进制、前端包和桌面安装包分发 | S:修改版须保留醒目法律归属和原项目链接；发布物须附NOTICE及第三方声明
+README.en.md[SG6L]: F:英文介绍项目定位、能力、模型接口、部署步骤、环境变量和帮助资源 | R:code:README.md,code:README.fr.md,code:README.ja.md,code:README.zh_CN.md,code:README.zh_TW.md | A:英文用户据此了解功能并开始部署 | S:要求合法授权上游并遵守服务条款和适用法规
+README.fr.md[SG6L]: F:法文说明项目特性、模型接口、计费安全、部署要求和配置方式 | R:code:README.md,code:README.en.md,code:README.ja.md,code:README.zh_CN.md,code:README.zh_TW.md | A:法语用户据此了解和部署服务 | S:要求合法授权上游并遵守服务条款和适用法规
+README.ja.md[SG6L]: F:日文说明项目特性、模型接口、计费安全、部署要求和配置方式 | R:code:README.md,code:README.en.md,code:README.fr.md,code:README.zh_CN.md,code:README.zh_TW.md | A:日语用户据此了解和部署服务 | S:要求合法授权上游并遵守服务条款和适用法规
+README.md[SG6L]: F:概述项目能力、模型接口、账号与计费安全、快速部署和配置 | R:code:README.en.md,code:README.fr.md,code:README.ja.md,code:README.zh_CN.md,code:README.zh_TW.md | A:用户据此了解项目并选择部署方式 | S:要求合法授权上游并遵守服务条款和适用法规
+README.zh_CN.md[SG6L]: F:中文介绍项目定位、能力、模型接口、部署步骤、环境变量和帮助资源 | R:code:README.md,code:README.en.md,code:README.fr.md,code:README.ja.md,code:README.zh_TW.md | A:中文用户据此了解功能并开始部署 | S:要求合法授权上游并遵守服务条款和适用法规
+README.zh_TW.md[SG6L]: F:繁体中文介绍项目定位、能力、模型接口、部署步骤、环境变量和帮助资源 | R:code:README.md,code:README.en.md,code:README.fr.md,code:README.ja.md,code:README.zh_CN.md | A:繁体中文用户据此了解功能并开始部署 | S:要求合法授权上游并遵守服务条款和适用法规
+THIRD-PARTY-LICENSES.md[SG8S]: F:列出Go、Web和Electron直接依赖的版本、用途范围与许可证 | R:code:go.mod,code:web/package.json,code:electron/package.json,code:NOTICE | A:核对依赖许可并随分发包提供清单 | S:该清单仅盘点直接依赖；外部发布前仍须审查传递依赖
+dd.yml[FV6T]: F:提供Docker Compose部署样例，运行new-api并连接外部PostgreSQL与Redis | R:code:Dockerfile,code:.env.example | A:挂载data和日志目录、发布服务端口并检查status健康端点 | S:文件含敏感环境值示例，部署前必须替换且不得直接用作生产凭证
+docker-compose.dev.yml[FV6T]: F:用本地Dockerfile.dev及Postgres、Redis启动后端供前端开发服务器代理 | R:code:Dockerfile.dev,code:makefile | A:开发者运行Compose后用make dev-web启动Web界面 | S:本地HTTP开发明确关闭Secure Cookie OriginGuard；配置仅适用于开发环境
+docker-compose.yml[FV6T]: F:提供Docker Compose主服务部署样例并挂载数据、日志及健康检查 | R:code:Dockerfile,code:.env.example | A:通过SQL_DSN和Redis连接外部数据库及缓存 | S:文件含敏感环境值示例，部署前必须替换且不得直接用作生产凭证
+go.mod[FV9S]: F:定义new-api根Go模块、Go版本与后端及数据库驱动依赖 | R:code:relaykit/go.mod,code:Makefile,code:.github/workflows/ci.yml | A:Go工具链按模块图构建主服务 | S:relaykit由本地replace引入且保留独立模块边界；CI关闭workspace独立验证
+go.sum[FV3L]: F:记录Go模块依赖版本对应的校验和 | R:code:go.mod | A:Go模块下载与构建核验依赖内容 | S:-
+main.go[EG9M]: F:组装服务初始化、后台Runner、Gin中间件与API/Web服务器并处理关闭信号 | R:code:router/router.go,code:controller/system_task_handlers.go,code:model/main.go,code:common/json.go | A:启动二进制或调度Task插件CLI，嵌入web/dist并优雅退出 | S:初始化数据库和authz后挂载路由；设置Task adaptor后才启动Runner；HTTP关闭默认等待120秒
+makefile[FV6T]: F:定义前端构建、API启动、Docker开发服务、Web开发与Go/relaykit测试入口 | R:code:docker-compose.dev.yml,code:go.mod,code:relaykit/go.mod,code:web/package.json | A:开发者通过make目标执行常用工作流 | S:test对根模块和relaykit分别设置GOWORK=off
+new-api.service[OV6T]: F:提供以systemd启动、自动重启并开机启用new-api服务的单位模板 | R:code:Dockerfile,code:main.go | A:运维者按注释调整运行用户、工作目录、二进制参数和日志路径后安装 | S:模板中的ubuntu用户与/path/to占位路径不能未经替换直接用于部署
+
+===/home/debian/ai/new-api/.agents/github/===
+ISSUE.md[XQ6S]: F:为Agent提供Issue正文模板，涵盖范围筛查、环境、复现证据、研究与后续范围 | R:code:.github/ISSUE_TEMPLATE/bug_report.yml,code:.github/ISSUE_TEMPLATE/feature_request.yml | A:按章节以真实材料填写Issue正文 | S:必需事实缺失时先向用户询问；越界请求和使用配置问题不得提交
+PR.md[XQ6S]: F:约束Agent PR正文的范围筛查、Issue事实、代码研究、行为说明与验证记录 | R:code:.github/PULL_REQUEST_TEMPLATE.md,code:.github/PULL_REQUEST_TEMPLATE/en.md,code:AGENTS.md | A:依据关联Issue和实际改动填写完整PR正文 | S:新功能须关联Issue；大方向变更先取得维护者认同；越界或使用问题不创建PR
+
+===/home/debian/ai/new-api/.agents/skills/i18n-translate/===
+SKILL.md[XL7M]: F:规定前端i18n键检查、七语翻译、脚本写入与同步工作流 | R:code:web/src/i18n/locales/en.json,code:web/package.json | A:按调用点和locale语境翻译并补齐全部语言 | S:locale JSON不得手动编辑；写入必须经add-missing-keys.mjs并在web运行bun run i18n:sync
+
+===/home/debian/ai/new-api/.agents/skills/shadcn-ui/===
+SKILL.md[XU6S]: F:提供项目内shadcn CLI、组件信息、主题、注册表和MCP文档入口 | R:code:web/components.json | A:在web目录读取shadcn项目配置并按需查阅vendored规则 | S:-
+
+===/home/debian/ai/new-api/.agents/skills/vercel-react-best-practices/===
+SKILL.md[XQ5T]: F:为React性能任务规定按问题查找Vercel规则并依影响排序的流程 | R:code:.agents/skills/vercel-react-best-practices/references/full-guide.md | A:先处理异步瀑布与包体优化，再看较低优先级规则 | S:默认只读与任务相关章节，不通读整份指南
+
+===/home/debian/ai/new-api/.agents/skills/vercel-react-best-practices/references/===
+full-guide.md[XQ6L]: F:汇编React性能规则，覆盖异步并行、包体、服务端渲染、数据获取、重渲染和渲染优化 | R:code:.agents/skills/vercel-react-best-practices/SKILL.md | A:按问题定位对应规则并应用 | S:按规则章节定向阅读；优先处理消除瀑布与减少包体
+
+===/home/debian/ai/new-api/.github/===
+CODE_OF_CONDUCT.md[SU3T]: F:定义社区参与承诺、可接受行为、违规行为和分级处置 | R:- | A:社区成员与负责人据此处理社区行为 | S:-
+FUNDING.yml[FU1T]: F:声明GitHub可识别的赞助平台及自定义赞助链接字段 | R:- | A:GitHub据配置展示赞助入口 | S:-
+PULL_REQUEST_TEMPLATE.md[FQ5T]: F:为人工提交者说明变更类型、关联Issue、变更描述、验证证据和检查项 | R:code:.agents/github/PR.md | A:人工提交PR时按模板补全信息 | S:AI Agent应使用.agents/github/PR.md而非此人工模板
+SECURITY.md[SS7T]: F:说明支持版本、私密漏洞披露渠道、响应流程和部署安全建议 | R:code:.github/ISSUE_TEMPLATE/config.yml | A:通过Security Advisory草稿或指定邮箱报告漏洞 | S:不得在公开GitHub Issue披露漏洞；批量报告须事先联系维护团队
+
+===/home/debian/ai/new-api/.github/ISSUE_TEMPLATE/===
+bug_report.yml[FQ6S]: F:以中文GitHub表单收集版本来源、问题归属、复现过程和预期结果 | R:code:.agents/github/ISSUE.md,code:.github/ISSUE_TEMPLATE/config.yml | A:提交Bug时提供可核验环境和证据 | S:拒绝第三方与透传问题及仅粘贴上游报错；转发报告须比较直连上游和new-api
+bug_report_en.yml[FQ6S]: F:以英文GitHub表单收集版本来源、问题归属、复现过程和预期结果 | R:code:.agents/github/ISSUE.md,code:.github/ISSUE_TEMPLATE/config.yml | A:提交Bug时提供可核验环境和证据 | S:拒绝第三方与透传问题及仅粘贴上游报错；转发报告须比较直连上游和new-api
+config.yml[FQ4T]: F:关闭空白Issue并引导使用问题前往文档或DeepWiki | R:code:.github/ISSUE_TEMPLATE/bug_report.yml,code:.github/ISSUE_TEMPLATE/feature_request.yml | A:GitHub创建Issue时显示可用入口 | S:blank_issues_enabled=false
+feature_request.yml[FQ5T]: F:以中文GitHub表单收集版本、功能描述和应用场景 | R:code:.agents/github/ISSUE.md,code:.github/ISSUE_TEMPLATE/config.yml | A:提交功能请求时先核查文档、范围和重复项 | S:不接收Coding Plan、逆向渠道、第三方封装和Codex反代兼容请求
+feature_request_en.yml[FQ5T]: F:以英文GitHub表单收集版本、功能描述和应用场景 | R:code:.agents/github/ISSUE.md,code:.github/ISSUE_TEMPLATE/config.yml | A:提交功能请求时先核查文档、范围和重复项 | S:不接收Coding Plan、逆向渠道、第三方封装和Codex反代兼容请求
+
+===/home/debian/ai/new-api/.github/PULL_REQUEST_TEMPLATE/===
+en.md[FQ5T]: F:为人工提交者说明变更类型、关联Issue、变更描述、验证证据和检查项 | R:code:.agents/github/PR.md | A:人工提交PR时按模板补全信息 | S:AI Agent应使用.agents/github/PR.md而非此人工模板
+
+===/home/debian/ai/new-api/.github/workflows/===
+ci.yml[OQ8T]: F:在Pull Request上运行Go vet、独立构建和模块测试以及前端类型检查与测试 | R:code:go.mod,code:relaykit/go.mod,code:web/package.json | A:合并前验证后端与前端 | S:GOWORK=off验证relaykit独立性；PR关闭事件仅在已合并时执行
+docker-build.yml[OV8S]: F:按版本标签构建并推送amd64和arm64镜像，创建多架构清单并签名 | R:code:Dockerfile,code:.github/workflows/docker-image-branch.yml | A:响应版本标签或手动输入标签发布镜像 | S:手动发布前验证Git标签存在；push触发排除nightly标签
+docker-image-branch.yml[OV8S]: F:手动构建并发布指定分支的amd64和arm64镜像与多架构清单 | R:code:Dockerfile,code:.github/workflows/docker-build.yml | A:将分支名规范化为镜像标签并发布 | S:两个架构均从预先解析并固定的同一提交SHA构建
+electron-build.yml[OV7S]: F:构建Windows Electron安装包并在正式版本标签时上传Release | R:code:electron/package.json,code:web/package.json | A:稳定版本标签或手动触发构建桌面客户端 | S:当前矩阵只构建Windows；tag触发排除带连字符的预发布版本
+release.yml[OV9S]: F:为Linux、macOS和Windows构建前端与Go二进制，生成校验和并上传Release | R:code:go.mod,code:web/package.json | A:由版本标签或手动触发跨平台发布 | S:Linux arm64发布依赖aarch64交叉编译器并启用CGO
+sync-release-to-gitcode.yml[OV7M]: F:按手动输入的GitHub标签同步Release元数据并可选上传资产至GitCode | R:code:.github/workflows/release.yml | A:校验GitCode仓库配置后创建或更新对应Release | S:新建前要求标签已镜像到GitCode；资产名规范化且已存在资产会跳过
+
+===/home/debian/ai/new-api/bin/===
+migration_v0.2-v0.3.sql[PD7T]: F:把用户所有令牌的剩余额度累加进对应用户额度 | R:code:model/user.go,code:model/token.go | A:仅在旧版本数据库升级时执行 | S:更新会重复累加，迁移必须只执行一次
+migration_v0.3-v0.4.sql[PD6T]: F:为已启用渠道插入一组旧版GPT模型能力记录 | R:code:model/ability.go,code:model/channel.go | A:升级旧数据库时补齐默认模型能力 | S:通过NOT EXISTS避免重复插入；SQL使用MySQL反引号标识符
+
+===/home/debian/ai/new-api/common/===
+account_password.go[CS9T]: F:验证新账号密码并按配置写入bcrypt或Argon2id哈希，同时验证Argon2id格式 | R:code:common/crypto.go,code:middleware/auth.go | A:账号注册和密码更改调用新密码校验与哈希 | S:密码不裁剪；新密码限8至128个Unicode字符；保留历史哈希验证，Argon2id仅接受本应用固定参数
+api_type.go[IN8T]: F:把渠道类型映射为统一适配API类型并判断Responses Compact支持范围 | R:code:constant/channel.go,code:constant/api_type.go,code:common/endpoint_type.go | A:relay分发前确定协议适配器 | S:未知类型回退OpenAI并标记未识别；TaskPlugin类型必须返回无适配器，不能回退OpenAI
+audio.go[CB6M]: F:用纯Go解析器从多种音频容器读取时长供转写计量与音频relay使用 | R:code:service/token_counter.go,code:relay/channel/openai/audio.go | A:按扩展名选择解码器并计算媒体时长 | S:WebM目前无法完整解析并返回错误；OGG解析失败时再尝试Opus
+body_storage.go[CR8S]: F:按阈值将请求体存入内存或临时磁盘，并提供可独立重读的请求体Reader | R:code:common/disk_cache_config.go,code:common/gin.go,code:relay/common/outbound_body.go,code:middleware/task_plugin_model.go | A:请求中间件与relay复用、限长和重放请求体 | S:流式磁盘写入失败时Reader已消费，不能安全回退内存；关闭存储会移除临时文件
+constants.go[FC8M]: F:集中定义运行时配置、默认值、用户角色、状态、配额和速率限制常量 | R:code:common/env.go,code:constant/env.go,code:common/session_cookie.go | A:配置加载与服务逻辑读取全局设置 | S:角色值Guest=0、User=1、Admin=10、Root=100；修改会影响权限判定兼容
+copy.go[CG5T]: F:提供泛型结构体深拷贝，并为RawMessage创建独立字节存储 | R:- | A:复制后需要隔离后续字段或原始JSON修改时调用 | S:RawMessage使用bytes.Clone避免源与副本共享底层数组
+crypto.go[CS8T]: F:提供HMAC-SHA256签名、bcrypt密码哈希及bcrypt和Argon2id校验入口 | R:code:common/account_password.go | A:安全组件按用途调用HMAC或密码校验 | S:Argon2id校验复用固定参数和输入长度边界；非Argon2格式按历史bcrypt校验
+custom-event.go[IN5T]: F:实现Gin HTTP响应上的简易Server-Sent Events内容类型和data帧写入 | R:- | A:流式处理将事件数据写入ResponseWriter | S:-
+database.go[CD9T]: F:记录主库和日志库方言并提供数据库类型判断及默认SQLite DSN | R:code:model/main.go,code:model/locking.go | A:模型层按主库或日志库类型选择兼容路径 | S:SQLite DSN必须保留WAL、busy_timeout(30000)与_txlock=immediate以支持并发写入
+disk_cache.go[CR6T]: F:创建、读写、删除和清理请求体及文件临时缓存并汇总目录用量 | R:code:common/body_storage.go,code:common/disk_cache_config.go | A:大请求体存储与启动清理使用统一缓存目录 | S:缓存文件以0600权限创建；旧文件清理按文件大小调整统计
+disk_cache_config.go[CR7T]: F:维护磁盘缓存阈值、上限、目录及内存和磁盘使用统计 | R:code:common/disk_cache.go,code:common/body_storage.go,code:setting/performance_setting/config.go | A:性能设置更新配置，body storage检查容量和统计 | S:默认禁用；超过配置总容量时不选择磁盘缓存
+email-outlook-auth.go[IN4T]: F:实现SMTP AUTH LOGIN挑战响应并识别Outlook类SMTP服务器 | R:code:common/email.go,code:common/constants.go | A:邮件传输需要兼容Outlook认证时选用LOGIN | S:-
+email.go[IN7S]: F:按SMTP设置建立SSL或STARTTLS连接并发送UTF-8 HTML邮件 | R:code:common/email_ntlm_auth.go,code:common/constants.go,code:service/user_notify.go,code:service/account_security.go | A:账户通知、验证和绑定流程调用发送邮件 | S:启用STARTTLS而服务端不支持时失败；只有账号和令牌均非空才执行SMTP认证
+email_ntlm_auth.go[IN6T]: F:根据SMTP服务器公告的机制协商PLAIN、LOGIN或NTLM认证 | R:code:common/email.go,code:common/constants.go | A:SMTP客户端认证委托此实现生成挑战响应 | S:显式强制LOGIN或配置的兼容服务器可覆盖机制协商
+embed-file-system.go[IR6T]: F:把嵌入式文件系统包装为Gin静态资源接口 | R:code:main.go | A:服务启动时挂载web/dist静态资源 | S:根路径主动返回文件不存在，让NoRoute路径注入页面分析代码
+endpoint_defaults.go[IN6T]: F:为聊天、Responses、Gemini、图片、向量和重排端点提供默认路径与HTTP方法 | R:code:constant/endpoint_type.go,code:controller/channel-test.go,code:model/pricing.go | A:渠道测试和模型价格能力根据端点类型读取默认值 | S:当前映射的默认方法均为POST
+endpoint_type.go[IN8S]: F:按渠道与模型选择优先端点序列，支持原生协议、OpenAI回退及图像入口 | R:code:common/endpoint_defaults.go,code:constant/channel.go,code:model/pricing.go | A:模型能力与请求分发据此选择可用上游接口 | S:OpenRouter只选OpenAI端点；图像模型端点会被插到首位
+env.go[FC5T]: F:提供整数、字符串和布尔环境变量读取并在缺失或解析失败时采用默认值 | R:code:common/constants.go | A:配置初始化调用对应类型读取环境变量 | S:数字或布尔解析失败会记录SysError后回退默认值
+etag.go[CR6T]: F:以SHA-256生成弱ETag并按HTTP弱比较规则匹配If-None-Match | R:- | A:缓存响应以命名空间和内容生成验证标签 | S:支持逗号列表与通配符*，比较时忽略双方W/前缀
+gin.go[CN9M]: F:封装Gin请求体缓存、可重用JSON表单解析、上下文类型读取和API响应 | R:code:common/body_storage.go,code:common/json.go,code:constant/env.go | A:控制器通过此层读取可重放且限长的请求体 | S:磁盘JSON直接流式解码并重置请求体；读取超限统一返回请求体过大错误
+go-channel.go[CR4T]: F:封装向bool和string通道安全发送及带秒级超时的发送 | R:- | A:异步任务通知使用发送结果处理已关闭或超时通道 | S:超时版本仅成功发送返回true；关闭通道和超时均返回false
+gopool.go[CR5T]: F:提供带上下文的relay协程池并在任务panic时记录错误和发送停止信号 | R:code:common/go-channel.go | A:relay异步工作通过RelayCtxGo提交 | S:panic回调只在上下文包含chan bool的stop_chan时发出停止信号
+hash.go[CS6T]: F:提供SHA-1、SHA-256摘要和HMAC-SHA256字节或十六进制辅助函数 | R:code:common/crypto.go | A:签名和摘要调用方按所需输出形式选择函数 | S:-
+init.go[CC9M]: F:解析启动参数和环境变量并初始化会话、TLS、邮件、数据库、请求限制及任务配置 | R:code:common/constants.go,code:common/session_cookie.go,code:common/node_identity.go,code:constant/env.go | A:进程启动早期调用InitEnv设置全局运行参数 | S:SESSION_SECRET使用占位值random_string会终止启动；未配置CRYPTO_SECRET时继承SESSION_SECRET
+ip.go[CS6T]: F:解析IP、识别环回链路本地及RFC1918私网地址并匹配CIDR列表 | R:code:common/ssrf_protection.go | A:网络访问策略检查IP与允许网段 | S:完整特殊用途地址拦截由SSRFProtection实现，此处IsPrivateIP仅覆盖基础私网范围
+json.go[CG9T]: F:统一宿主JSON编解码入口并将选定codec注入relaykit kitutil | R:code:relaykit/relayconvert/kitutil/json.go,code:common/copy.go | A:根模块业务代码通过common函数处理JSON | S:init会为宿主和relaykit设置同一codec；直接编码调用仅位于此codec实现
+model.go[CA5T]: F:按模型名称判断Responses专属、图片生成和OpenAI文本模型类别 | R:code:common/endpoint_type.go | A:端点选择及模型请求路由使用分类结果 | S:除imagen-前缀项外主要采用子串匹配模型名
+node_identity.go[CO5T]: F:从NODE_NAME或主机名初始化节点身份并报告名称来源 | R:code:common/constants.go,code:common/init.go | A:实例审计和后台任务读取节点身份 | S:未显式设置NODE_NAME时使用主机名并标记为建议人工配置
+page_info.go[CU5T]: F:解析兼容查询参数并输出分页信息、页码、大小、总数和条目 | R:- | A:管理API列表使用PageInfo统一分页响应 | S:兼容p/page_size与ps/size；页大小最大限制为100
+password_crypto.go[CS9T]: F:管理浏览器登录密码公钥并解密RSA-OAEP旧密文及v2混合加密信封 | R:code:common/account_password.go,code:controller/login_verification.go | A:登录处理器按keyID解密客户端密码 | S:v2以RSA-OAEP包装AES-256密钥并用GCM加密；密钥ID绑定活动公钥且异常统一报错
+performance_config.go[CP6T]: F:以原子值保存性能监控开关和CPU、内存、磁盘阈值 | R:code:common/system_monitor.go | A:管理设置更新配置，后台监控读取快照 | S:默认启用且三项阈值均为90
+pprof.go[CO3T]: F:周期检测CPU并在使用率超过阈值时写入CPU pprof采样文件 | R:code:common/sys_log.go | A:诊断高CPU时生成本地pprof文件 | S:采样结果写入工作目录的./pprof
+proxy_url.go[IN7T]: F:严格校验持久化代理URL并为运行时兼容旧路径参数提供规范化 | R:code:common/env.go,code:relay/channel/api_request.go | A:网络传输配置读取代理URL并按模式验证 | S:只允许HTTP、HTTPS、SOCKS5和SOCKS5H；SOCKS缺端口默认1080
+pyro.go[IO6T]: F:按环境变量配置将CPU、内存分配、goroutine、互斥锁和阻塞采样送往Pyroscope | R:code:common/init.go | A:服务启动时配置分析端点与认证后启用持续剖析 | S:未配置PYROSCOPE_URL时不启动profiling
+quota.go[CB3T]: F:按当前QuotaPerUnit计算固定十个单位的可信额度常量 | R:code:common/constants.go | A:调用方取得基础可信配额 | S:-
+quota_math.go[CB9S]: F:集中执行配额浮点、四舍五入和Decimal转换并返回限幅审计标记 | R:code:common/quota.go,code:service/log_info_generate.go,code:pkg/billingexpr/round.go | A:计费预扣、结算和钱包转换使用共享函数 | S:单笔额度饱和到int32并记录SysError；Checked结果须关联消费日志审计；钱包额度上限为2^53-1
+rate-limit.go[CP6T]: F:以内存时间戳队列实现按key和时间窗口判定请求数的滑动限流 | R:- | A:本地进程限流调用Init后使用Request | S:过期清理仅在Init收到正过期时间时启动
+redis.go[CD8M]: F:初始化Redis客户端并提供字符串、Hash对象及计数读写辅助方法 | R:code:common/init.go,code:model/user_cache.go | A:缓存与跨节点状态通过共享RDB访问 | S:递增和Hash字段更新只在已有正TTL时执行并保留该TTL；无TTL键不会修改
+request_body_limit.go[CN6T]: F:把匿名请求体配置KB值转换为字节并提供默认限制 | R:code:constant/env.go,code:common/gin.go | A:未认证请求体防护读取此限制 | S:负配置值回退到512KB默认值
+session_cookie.go[CS9T]: F:规范化浏览器Origin并初始化Secure会话Cookie及可信Origin白名单 | R:code:common/init.go,code:middleware/auth_origin.go | A:refresh和logout校验使用精确Origin设置 | S:安全模式要求至少一个HTTPS可信Origin；拒绝通配符、路径、query、fragment及null Origin
+ssrf_protection.go[CS9M]: F:按域名、IP、端口和私网策略验证URL及解析出的网络目标 | R:code:common/ip.go,code:setting/fetch_setting,code:pkg/ionet/client.go | A:远程抓取或代理拨号前校验目标和解析地址 | S:默认阻止私网、保留、回环和链路本地地址；启用域名IP过滤时须校验每个DNS解析结果
+str.go[CG6S]: F:提供字符串、JSON形态、编码、计费偏好规范化及邮件与日志敏感信息掩码 | R:code:common/json.go,code:relaykit/relayconvert/kitutil | A:通用业务代码复用安全与格式转换辅助 | S:非Debug本地日志预览限制2048字节；邮件掩码只显示域名
+sys_log.go[CO6T]: F:向Gin标准输出和错误输出写系统日志、致命错误及启动状态 | R:code:common/session_cookie.go,code:common/node_identity.go | A:配置和运行状态通过SysLog与SysError记录 | S:日志轮转切换Writer时须遵循LogWriterMu的读写锁约定
+system_monitor.go[CO7T]: F:后台周期采样CPU、内存和磁盘占用并原子发布最新状态 | R:code:common/performance_config.go,code:common/system_monitor_unix.go,code:common/system_monitor_windows.go | A:系统信息接口读取最近一次采样状态 | S:监控关闭时每30秒检查配置，启用后每5秒刷新一次
+system_monitor_unix.go[CR6T]: F:在非Windows平台通过Statfs获取缓存目录所在文件系统空间 | R:code:common/system_monitor.go,code:common/disk_cache.go | A:系统监控汇总可用与已用磁盘容量 | S:构建标签限定为非Windows；路径默认使用系统临时目录
+system_monitor_windows.go[CR6T]: F:在Windows通过GetDiskFreeSpaceExW读取缓存目录所在磁盘容量 | R:code:common/system_monitor.go,code:common/disk_cache.go | A:系统监控汇总可用与已用磁盘容量 | S:构建标签限定Windows；路径默认使用系统临时目录
+topup-ratio.go[CB6T]: F:线程安全地读取、导出和整体更新用户组充值倍率 | R:code:common/constants.go | A:充值计费按用户组取得倍率 | S:未知用户组记录SysError并回退倍率1
+totp.go[CS8S]: F:生成30秒六位SHA-1 TOTP密钥、四个八字符恢复码并校验或哈希备用码 | R:code:controller/twofa.go,code:model/twofa.go,code:common/account_password.go | A:身份验证流程调用TOTP或恢复码工具 | S:恢复码按账号密码哈希器保存；生成码为八位字母数字并以四位分组
+trusted_proxies.go[CN8T]: F:解析TRUSTED_PROXIES设置并将CIDR列表应用于Gin引擎 | R:code:common/init.go,code:middleware/trusted_proxies.go | A:启动时统一配置客户端IP代理信任边界 | S:空值启用回环、RFC1918与ULA默认网段；none必须单独使用，显式列表完全替代默认项
+upstream_credential_crypto.go[CS9T]: F:以AES-GCM加密并解密持久化的上游服务凭证 | R:code:model/channel.go,code:common/constants.go | A:渠道凭证写入或读取时转换upstream-v1密文 | S:密钥由域分隔的CRYPTO_SECRET或SESSION_SECRET派生；轮换密钥会使既有密文无法解密
+url_validator.go[CS8T]: F:按可信重定向域名列表验证HTTP或HTTPS跳转目标 | R:code:constant/env.go | A:支付或账户流程在重定向前校验域名 | S:可信根域及其子域均匹配；协议仅允许http和https
+utils.go[CG7M]: F:提供网络地址、随机密钥、请求ID、格式转换、临时文件及URL组装等通用工具 | R:code:common/hash.go,code:common/crypto.go,code:common/str.go | A:跨模块复用运行时与编码辅助 | S:API密钥字符使用crypto/rand生成；GetRandomInt使用math/rand，不用于安全密钥
+validate.go[CQ4T]: F:初始化供请求DTO使用的共享go-playground字段校验器 | R:code:relaykit/dto | A:绑定层通过Validate执行声明式字段规则 | S:-
+verification.go[CS8T]: F:在进程内按用途和用户键登记、验证、过期清理短期验证码 | R:code:controller/misc.go,code:service/email_binding.go,code:service/account_security.go | A:邮件验证和密码重置流程保存并检查验证码 | S:默认有效10分钟；验证成功不会自动删除，调用者须显式DeleteKey实现一次性
+
+===/home/debian/ai/new-api/common/limiter/===
+limiter.go[CP7T]: F:通过Redis Lua脚本提供按容量、速率和请求令牌数配置的令牌桶限流 | R:code:common/limiter/lua/rate_limit.lua | A:网络请求按业务key调用Allow判定是否放行 | S:sync.Once使首个Redis客户端成为进程级单例；限流更新在Redis脚本内完成
+
+===/home/debian/ai/new-api/common/limiter/lua/===
+rate_limit.lua[CP6T]: F:在Redis内原子补充令牌桶并扣减请求令牌以返回放行结果 | R:code:common/limiter/limiter.go | A:由RedisLimiter通过EVALSHA执行 | S:使用Redis服务端TIME计算经过秒数，避免各应用节点时钟偏差
+
+===/home/debian/ai/new-api/constant/===
+README.md[XQ5T]: F:说明constant包的职责、文件目录和新增常量的维护约定 | R:code:constant/channel.go,code:constant/context_key.go,code:constant/env.go | A:新增共享常量时据此检查所属文件和依赖边界 | S:文档要求避免在constant包内加入业务流程
+api_type.go[IN8T]: F:定义渠道适配器使用的连续API类型编号及Dummy哨兵 | R:code:common/api_type.go | A:relay选择渠道对应协议适配器 | S:APITypeDummy必须保持枚举末尾，新增类型不得追加其后
+azure.go[IC2T]: F:提供Azure模型名兼容逻辑使用的固定UTC截止时间戳 | R:code:relay/channel/aws/adaptor.go | A:Azure路径处理根据该时间边界执行兼容规则 | S:-
+cache_key.go[CD6T]: F:定义用户缓存键格式和Token Hash字段名 | R:code:model/user_cache.go,code:model/token_cache.go | A:Redis缓存生产者与消费者共享字符串键协议 | S:键格式字符串属于跨节点缓存契约，修改需同步所有读写方
+channel.go[IN9M]: F:定义渠道类型编号、上游默认地址、显示名和特殊协议基础地址 | R:code:common/api_type.go,code:common/endpoint_type.go,code:controller/channel.go | A:渠道设置、UI名称和适配分发据此映射类型 | S:渠道编号与基址数组下标需保持兼容；ChannelTypeDummy是末尾哨兵
+context_key.go[CG8T]: F:定义Gin请求上下文中Token、渠道、用户、重试、审计及语言字段的类型化键 | R:code:common/gin.go,code:middleware/distributor.go | A:中间件、控制器和relay通过稳定键传递请求状态 | S:字符串值是跨模块查找契约，重命名需同步所有读写点
+endpoint_type.go[IN8T]: F:将Relaykit EndpointType及聊天、Responses、Gemini、图片等常量别名暴露给宿主 | R:code:common/endpoint_defaults.go,code:relaykit/types/endpoint.go | A:宿主路由与价格层使用统一端点身份 | S:实际类型定义归relaykit所有，宿主别名保持旧导入兼容
+env.go[FC7T]: F:集中声明启动时注入的请求限制、任务、媒体统计和重定向配置值 | R:code:common/init.go | A:InitEnv解析环境变量后填充运行配置 | S:仅保存共享运行态，不在本文件解析或验证环境变量
+finish_reason.go[IN7T]: F:把Relaykit标准FinishReason值别名导出给宿主使用 | R:code:relaykit/types/finish_reason.go | A:协议转换与响应封装保持一致的结束原因 | S:规范值由relaykit/types维护
+midjourney.go[IB6T]: F:定义Midjourney错误码、动作字符串及模型名到动作映射 | R:code:constant/task.go,code:plugins/tasks | A:任务接入按模型动作映射分派操作 | S:动作字符串是任务插件间的协议值
+multi_key_mode.go[CD5T]: F:定义渠道多密钥的随机和轮询选择模式字符串 | R:code:controller/channel.go,code:model/channel.go | A:多Key渠道配置和分发逻辑共享模式值 | S:模式字符串会持久化，变更需兼容已有配置
+setup.go[CC2T]: F:保存服务是否完成首次初始化的进程级布尔状态 | R:code:model/setup.go | A:安装初始化和路由保护逻辑读取Setup | S:-
+task.go[CW7T]: F:定义任务平台、视频动作、旧动作别名归一化及插件总开关 | R:code:relay/channel/task/taskcommon/helpers.go,code:pkg/jsplugin/engine.go | A:任务适配器先规范已知历史动作 | S:只映射已登记的旧名称；未知平台动作原样透传
+waffo_pay_method.go[IB5T]: F:提供Waffo结账界面名称、图标和支付类型映射默认列表 | R:code:controller/topup_waffo.go | A:支付前端据此展示并提交银行卡、Apple Pay与Google Pay | S:PayMethodType和PayMethodName必须符合Waffo服务端枚举
+
+===/home/debian/ai/new-api/controller/===
+access_token.go[CS9T]: F:查询、生成和撤销用户系统访问令牌并提供审计日志查询 | R:code:service/verification.go,code:controller/audit.go,code:model/user.go | A:敏感写操作经RequireSecurityProof后变更令牌 | S:生成与撤销均需安全证明；审计只记录令牌指纹，不存明文令牌
+audit.go[CO8M]: F:渲染稳定操作事件文案并记录管理操作及用户安全审计上下文 | R:code:model/audit_log.go,code:constant/context_key.go | A:高危控制器操作复用统一审计入口 | S:个人安全事件不写admin_info；token批量审计最多保留前100个ID并标记截断
+auth_session.go[CS9M]: F:处理浏览器会话刷新、登出、会话列表和撤销当前或其他设备 | R:code:service/auth_session.go,code:middleware/auth.go,code:model/user_session.go | A:会话端点调用service轮换刷新凭证并管理session ID | S:响应设置no-store；refresh/logout校验会话ID一致性，管理设备会话必须使用浏览器Session
+authz.go[ES6T]: F:向权限编辑器返回资源动作目录和各角色默认授权矩阵 | R:code:service/authz/registry.go,code:service/authz/role.go | A:前端按服务端单一权限Schema绘制编辑器 | S:权限资源与角色定义以service/authz为准，本控制器只投影
+billing.go[EB6T]: F:提供OpenAI兼容订阅额度与累计用量查询响应 | R:code:controller/channel-billing.go,code:common/constants.go | A:兼容客户端按站点额度显示配置读取用户或Token用量 | S:按USD、CNY或tokens展示单位换算；无限额度Token返回固定高额度表示值
+channel-billing.go[EB8M]: F:查询多个上游提供商余额并支持Advanced Custom余额协议和批量余额更新 | R:code:model/channel.go,code:constant/channel.go,code:controller/audit.go | A:管理员按需刷新余额或由后台周期任务同步 | S:Advanced Custom响应限256KiB且仅接受非负有限credit_summary数值；自动更新可禁用余额不高于零的AutoBan渠道
+channel-test.go[EN9L]: F:构造多协议测试请求、执行真实上游relay并检查响应与流事件 | R:code:controller/channel.go,code:common/endpoint_defaults.go,code:relay/common/billing.go | A:单渠道测试或系统任务测试渠道健康、延迟及模型能力 | S:健康任务按配置可自动禁用或恢复渠道；手动全测通过系统任务排队且拒绝并发重复任务
+channel.go[EN9L]: F:管理渠道列表、增改删、标签、上游模型发现、状态、多Key和Ollama模型操作 | R:code:model/channel.go,code:constant/channel.go,code:service/authz/resources_channel.go,code:controller/audit.go | A:管理API执行渠道操作并更新缓存及代理客户端 | S:列表省略Key，查看Key需安全验证并审计；敏感修改需要专用权限且更新禁止直接设置状态
+channel_affinity_cache.go[CO6T]: F:查询渠道亲和性与用量缓存统计并按规则或全局清理 | R:code:service/channel_affinity.go | A:运维接口检查和刷新亲和性缓存 | S:按规则查询用量统计必须提供rule_name与key_fp，不接收明文Key
+channel_authz.go[ES9S]: F:将渠道字段分为敏感、普通、操作管理和只读类别以判定敏感写权限 | R:code:controller/channel.go | A:UpdateChannel比较字段变化并清除只读输入 | S:未知字段默认按敏感处理；新增模型字段必须显式分类
+channel_sub2api_rate.go[EB6S]: F:预览、同步并开关Sub2API渠道上游声明的倍率和成本倍率 | R:code:service/sub2api_rate_sync.go,code:controller/channel.go | A:管理端调用service探测单渠道费率或启动自动同步 | S:只接受Sub2API渠道；上游不支持/v1/sub2api/billing时明确失败
+channel_upstream_update.go[EN8L]: F:巡检上游模型增删、暂存变更、支持显式应用或按配置自动添加 | R:code:controller/channel.go,code:controller/channel_test.go,code:model/channel.go | A:后台系统任务批量扫描启用渠道，管理员审核模型变化 | S:自动同步只会添加模型；删除和非自动添加均保留待审候选，应用仅接受当前候选集合中的选择
+checkin.go[EU4T]: F:返回当前用户指定月份签到统计并执行一次签到额度奖励 | R:code:model/checkin.go,code:setting/operation_setting/checkin_setting.go | A:用户在签到开放时查看状态或领取签到奖励 | S:签到功能关闭时状态和领取操作都会拒绝
+codex_usage.go[EI7S]: F:查询Codex渠道用量与重置额度并调用上游执行用量重置 | R:code:relay/channel/codex/adaptor.go,code:service/codex_oauth.go | A:仅对单Key Codex渠道使用其OAuth凭证访问上游 | S:401/403且存在RefreshToken时先刷新并保存凭证，再重试原查询
+custom_oauth.go[ES9L]: F:维护自定义OAuth/OIDC提供方、获取Discovery文档及管理用户绑定 | R:code:oauth/generic.go,code:model/custom_oauth_provider.go,code:controller/oauth.go,code:controller/audit.go | A:管理员配置提供方，用户通过OAuth流程绑定或解绑账号 | S:Provider响应剔除ClientSecret；仍有用户绑定时禁止删除；用户绑定变更需登录Session和安全证明
+deployment.go[IH8L]: F:通过io.net企业API连接、部署、查询、扩容、终止GPU容器并读日志 | R:code:pkg/ionet/client.go,code:common/constants.go | A:部署控制器使用配置的io.net凭证调用云资源接口 | S:常规操作仅在提供方启用且已配置API Key时开放；测试连接允许临时提交Key但不返回它
+email_binding.go[ES8S]: F:启动、重发及完成当前账户邮箱绑定流程 | R:code:service/account_security.go,code:controller/audit.go,code:common/verification.go | A:账户绑定使用浏览器Session、安全证明和邮件验证码 | S:绑定记录用户安全审计且不写入验证码；完成后发布用户认证缓存更新
+group.go[EU5T]: F:返回所有服务用户组及当前用户实际可用的组、费率和说明 | R:code:setting/ratio_setting,code:service/user_group.go | A:模型与用户界面展示路由计费分组 | S:用户组列表按当前用户可用组过滤
+image.go[EU1T]: F:声明图片读取控制器入口但当前处理函数为空 | R:- | A:路由可指向GetImage | S:-
+log.go[EO6S]: F:提供管理员与用户消费日志、Token日志查询和配额及Token使用统计 | R:code:model/log.go,code:controller/access_token.go | A:按时间、模型、用户、渠道、分组及请求ID分页查询 | S:管理员结果按Root角色分别格式化；已废弃搜索接口明确失败
+login_verification.go[ES9S]: F:完成登录阶段的TOTP或WebAuthn Passkey二次验证并签发登录响应 | R:code:service/auth_session.go,code:service/passkey,code:controller/passkey.go | A:验证绑定flow token后更新凭证断言状态并完成登录 | S:Passkey挑战绑定登录flow与用户AuthVersion，强制User Verification并弹出一次性Flow
+midjourney.go[EW7M]: F:轮询未完成Midjourney任务、更新任务媒体状态并提供全局及个人历史查询 | R:code:model/midjourney.go,code:service/task_billing.go | A:系统任务按渠道查询上游任务并同步进度 | S:超过一小时仍未完成的任务标记失败；仅成功争得状态更新的执行者触发额度退款
+misc.go[EG9M]: F:提供状态与站点信息、公开法律内容、邮箱验证和密码重置接口 | R:code:common/verification.go,code:service/account_security.go,code:constant/setup.go | A:前端加载公开配置并通过邮箱启动验证或恢复密码 | S:密码重置邮件响应对存在和不存在邮箱均返回成功；重置Token成功后删除，响应返回新生成密码
+missing_models.go[EA4T]: F:返回渠道引用但模型元数据表中尚未登记的模型名称 | R:code:model/missing_models.go,code:controller/model_meta.go | A:管理端发现需补齐元数据的模型 | S:-
+model.go[EN8M]: F:按渠道能力、用户组、Token模型白名单和计费配置生成OpenAI及原生协议模型列表 | R:code:model/channel.go,code:common/model.go,code:controller/group.go | A:兼容模型接口及仪表盘读取可用模型 | S:Token模型限制和未配置计费模型过滤会改变返回集；auto组按实际可路由组聚合
+model_meta.go[EC8M]: F:维护模型目录、供应商元数据并计算实际渠道连接、可见状态和支持接口 | R:code:model/model_meta.go,code:controller/model_sync.go | A:列表、搜索、编辑与删除模型目录记录 | S:删除时移除定价仅Root可操作；删除模型及渠道引用采用显式选项
+model_pricing_config.go[EB7T]: F:读取定价快照并批量写入所选模型定价变更 | R:code:model/pricing.go,code:controller/audit.go | A:管理定价编辑器提交模型变更 | S:快照冲突返回HTTP409且成功后只审计模型名
+model_sync.go[IC8L]: F:获取上游模型与供应商目录，预览本地差异后按选择同步元数据 | R:code:model/model_metadata_sync.go,code:controller/model_meta.go | A:管理员选择上游字段变更并应用到模型目录 | S:Apply重取目录并校验source_version，来源变化时返回冲突要求重新预览
+oauth.go[ES9L]: F:统一处理内建与自定义OAuth登录、绑定、二次验证及新用户创建 | R:code:model/auth_flow.go,code:oauth/registry.go,code:service/auth_session.go | A:生成state流程后处理提供方回调并创建或关联账户 | S:state限时且成功或错误回调单次消费；绑定/验证要求发起的同一用户Session和安全证明
+option.go[EC9L]: F:读取与更新全局运行选项并校验认证、计费、支付、限流和站点配置 | R:code:model/option.go,code:setting/billing_setting/tiered_billing.go,code:controller/audit.go | A:管理端通过键值选项更新设置 | S:敏感密钥不在选项列表回显且审计只记录键；支付合规字段不可经通用接口修改，表达式先编译与冒烟验证
+passkey.go[ES9L]: F:处理Passkey注册、登录、解绑、状态、管理员重置及敏感操作step-up | R:code:service/passkey,code:model/passkey.go,code:controller/login_verification.go | A:以WebAuthn挑战flow完成账户凭证验证 | S:强制User Verification并绑定短时一次性flow；注册/删除轮换当前Session版本，管理员重置撤销该用户所有Session
+payment_compliance.go[ES8T]: F:由用户确认当前支付合规条款并保存版本、时间、操作者和来源IP | R:code:setting/operation_setting,code:controller/payment_webhook_availability.go | A:仪表盘Session提交明确confirmed确认值 | S:禁止API access token确认；付款功能启用前必须已确认当前条款版本
+payment_webhook_availability.go[EC7S]: F:依据合规确认和各支付服务凭证判断充值及Webhook是否可用 | R:code:controller/payment_compliance.go,code:setting | A:支付路由在展示或处理充值前检查提供方配置 | S:所有充值提供方均受支付合规确认门禁，且须满足各自凭证和产品配置
+perf_metrics.go[EO5T]: F:查询模型、分组及时间范围的聚合性能指标 | R:code:pkg/perf_metrics/metrics.go,code:setting/ratio_setting | A:管理仪表盘读取全局摘要或单模型指标 | S:未指定hours默认24小时，模型明细查询要求model参数
+performance.go[EP7S]: F:读取内存、磁盘缓存和系统统计，清理缓存及旧日志并触发GC | R:code:common/disk_cache.go,code:common/system_monitor.go,code:logger/logger.go | A:管理员执行运维诊断与资源清理 | S:缓存清理仅删除超过10分钟文件；日志清理按数量或天数且跳过当前活跃日志
+playground.go[EU6T]: F:将仪表盘Playground请求补齐用户组和临时Token上下文后转入OpenAI relay | R:code:controller/relay.go,code:middleware/auth.go,code:model/user_cache.go | A:已登录用户使用交互式API测试台 | S:拒绝access token认证，仅接受仪表盘Session
+plugin_protocol.go[IE9L]: F:把声明式任务插件桥接为OpenAI Responses同步、后台、流式及响应查询协议 | R:code:controller/plugin_protocol_limiter.go,code:relay/plugin_protocol.go,code:service/task_billing.go,code:pkg/jsplugin/engine.go | A:提交任务后轮询持久状态并调用插件渲染事件或最终响应 | S:提交超时与观察超时有界且客户端断开不取消已开始提交；读取响应必须归属当前用户并匹配插件协议声明
+plugin_protocol_limiter.go[IP8S]: F:原子维护Task Responses活跃观察数并提供幂等释放函数 | R:code:controller/plugin_protocol.go | A:桥接请求在提交或观察前获取全局、插件、用户和Token容量 | S:默认上限分别为全局128、每插件32、每用户4、每Token2
+prefill_group.go[ED5T]: F:列出、新建、修改和删除请求预填组 | R:code:model/prefill_group.go | A:管理端维护按类型分组的提示词预填配置 | S:创建时检查名称重复
+pricing.go[EB8T]: F:返回按用户可用组过滤的定价、模型供应商、端点及组倍率 | R:code:model/pricing.go,code:service/user_group.go,code:setting/ratio_setting | A:客户端构建公开定价视图 | S:仅返回用户可用分组价格；重置模型倍率会覆盖当前ModelRatio配置为默认值
+rankings.go[EO4T]: F:按指定周期读取排行榜快照，默认周期为week | R:code:service/rankings.go | A:排行榜页面获取汇总结果 | S:-
+ratio_config.go[EC7T]: F:在暴露开关启用时向授权调用者返回可同步的定价配置 | R:code:setting/ratio_setting,code:setting/billing_setting | A:外部兼容客户端读取站点定价 | S:倍率配置未启用时返回403
+ratio_sync.go[IC9L]: F:并发查询上游及官方和models.dev价格源，归一化后比较本地倍率与表达式差异 | R:code:setting/billing_setting,code:setting/ratio_setting,code:controller/option.go | A:管理端预览各来源的模型定价差异 | S:此接口只产生差异预览不写本地价格；生效tiered_expr优先于数字倍率字段
+redemption.go[EB8M]: F:查询、批量生成、更新、启停和清理兑换码 | R:code:model/redemption.go,code:common/quota_math.go,code:controller/payment_compliance.go | A:管理端维护可兑换额度及有效期 | S:创建受支付合规门禁且批次上限100；额度必须为正并符合钱包上限
+relay.go[EN9L]: F:统一分发OpenAI、Claude、Gemini、实时、图像、音频、Responses及异步任务请求 | R:code:relay/common/relay_info.go,code:relay/helper/price.go,code:service/billing.go,code:controller/task_plugin.go | A:校验请求、计量、选渠道、转换协议、重试并写入响应 | S:普通relay先预扣费，失败时退款并按策略收违规费；重试遵循渠道错误与显式约束
+return_path.go[EC3T]: F:以站点ServerAddress和路径后缀构造支付回跳地址 | R:code:controller/topup_stripe.go,code:controller/subscription_payment_epay.go | A:充值与订阅支付使用统一站点回跳地址 | S:-
+revalidated_response.go[CR7T]: F:为公开JSON内容返回内容弱ETag及条件请求304 | R:code:common/etag.go,code:controller/misc.go | A:公告、关于及法律页面变更后由客户端重新验证缓存 | S:Cache-Control为no-cache并按Accept-Encoding区分共享缓存；响应形状变化需更新ETag命名空间版本
+secure_verification.go[CS9T]: F:返回安全验证方式与要求并统一处理TOTP、Passkey、OAuth等安全证明 | R:code:service/verification.go,code:controller/audit.go,code:controller/passkey.go | A:安全敏感操作调用UniversalVerify或查询验证要求 | S:仅向客户端暴露固定业务错误；未知内部原因走认证服务端日志
+setup.go[EC8S]: F:读取和执行首次安装，必要时创建Root用户并保存站点运行模式 | R:code:constant/setup.go,code:common/account_password.go,code:model/setup.go | A:初始化期间检查数据库状态并提交一次性Setup | S:Setup完成后拒绝再次初始化；创建Root前验证并哈希密码
+subscription.go[EB9L]: F:管理订阅套餐、用户偏好、余额购买、订阅绑定、重置和失效 | R:code:model/subscription.go,code:controller/payment_compliance.go,code:controller/audit.go | A:用户购买或管理端维护订阅周期、额度和分组 | S:购买与套餐写入受合规确认门禁；订阅价格币种固定为USD，管理重置写审计日志
+subscription_payment_creem.go[EB8T]: F:校验套餐并创建Creem订阅待支付订单和Checkout链接 | R:code:controller/subscription.go,code:controller/topup_creem.go,code:model/subscription.go | A:用户以Creem Checkout购买启用的订阅套餐 | S:受支付合规确认和每用户购买上限约束；套餐需配置Creem产品与Webhook
+subscription_payment_epay.go[EB8M]: F:创建易支付订阅订单并处理已签名的支付通知及浏览器回跳 | R:code:controller/subscription.go,code:model/subscription.go,code:controller/return_path.go | A:验证易支付回调后完成对应订阅订单 | S:通知和Return均先验签；订单处理使用订单锁及模型状态校验
+subscription_payment_stripe.go[EB8S]: F:创建Stripe订阅Checkout Session并绑定本地订阅订单号 | R:code:controller/subscription.go,code:controller/topup_stripe.go,code:controller/return_path.go | A:用户通过Stripe价格ID购买单份订阅 | S:要求符合计费格式的API密钥、Webhook密钥和套餐Stripe价格ID
+subscription_payment_waffo_pancake.go[EB7S]: F:创建Waffo Pancake套餐待支付订单并签发带价格快照的Checkout Session | R:code:controller/subscription.go,code:controller/topup_waffo_pancake.go | A:用户按套餐产品ID完成订阅付款 | S:trade_no使用WAFFO_PANCAKE_SUB前缀供Webhook区分订阅与充值
+system_info.go[EO5T]: F:列出系统实例并按节点名或批次删除已过期实例 | R:code:model/system_instance.go,code:common/node_identity.go | A:运维端查看集群节点并清理陈旧记录 | S:单节点删除要求该实例仍可证明为过期
+system_task.go[EW5T]: F:启动日志清理任务并查询活跃、历史及指定系统任务 | R:code:model/system_task.go,code:service/system_task.go | A:管理端异步跟踪系统后台工作的状态与结果 | S:-
+system_task_handlers.go[EW8S]: F:注册渠道健康检查、上游模型更新、异步任务轮询和Sub2API费率同步定时处理器 | R:code:controller/channel-test.go,code:controller/channel_upstream_update.go,code:service/task_polling.go | A:系统任务Runner在启用条件满足时执行可取消工作流 | S:依赖数据库租约跨主节点去重并持久化运行记录
+task.go[EW9L]: F:查询用户任务、构造管理任务视图并安全列出或代理成功任务产物 | R:code:model/task.go,code:service/task_artifact.go,code:relay/channel/task/taskcommon/helpers.go | A:任务端点按所有者、仪表盘权限或artifact访问凭证读取结果 | S:产物私有且no-store；投影最多64项并校验key和类型，用户查询限所属任务
+task_plugin.go[IE9L]: F:上传、编译、版本管理、启停及同步数据库覆盖与内置JS任务插件 | R:code:pkg/jsplugin/registry.go,code:model/task_plugin.go,code:plugins/embed.go | A:插件管理端改变后构建并发布新的运行时Registry generation | S:源码上限1MiB并校验SHA和Meta；删除或停用受使用中渠道与in-flight保护，显式覆盖可触发清理
+task_plugin_debug.go[CO5M]: F:仅对任务插件提交、路由、预扣、落库、结算及回包生命周期输出结构化调试事件 | R:code:controller/relay.go,code:logger/logger.go | A:任务插件异常排查按阶段关联generation和公开任务号 | S:非插件请求的诊断方法全为no-op
+telegram.go[ES5T]: F:将旧Telegram未签名Widget登录入口退役并返回410 | R:code:controller/oauth.go,code:oauth/telegram.go | A:客户端转用统一Telegram OAuth流程 | S:不再接受旧式无签名认证请求
+token.go[ES9L]: F:管理用户API Token、自动分组、额度、到期、IP与模型限制及使用量查询 | R:code:model/token.go,code:controller/audit.go,code:common/quota_math.go | A:用户创建、更新、停用和批量管理自己的Token | S:列表回显掩码Key，明文需独立取Key接口；额度限制至钱包安全边界且审计不存Key
+topup.go[EB9L]: F:计算充值金额与钱包额度，创建易支付订单并验签处理充值回调和管理补单 | R:code:model/topup.go,code:common/quota_math.go,code:controller/payment_webhook_availability.go | A:校验充值上限后创建订单并在提供方通知后结算 | S:额度转换用钱包严格边界并验证账户容量；回调验签后调用模型事务状态校验，进程内订单锁仅作优化
+topup_creem.go[EB9L]: F:创建Creem充值Checkout并处理签名Webhook的充值或订阅完成事件 | R:code:model/topup.go,code:controller/subscription_payment_creem.go,code:common/quota_math.go | A:验证订单状态与支付类型后调用模型完成订单 | S:使用HMAC-SHA256校验creem-signature；无密钥仅在明确CreemTestMode时跳过验签
+topup_stripe.go[EB9L]: F:创建Stripe充值Checkout并验证Webhook以完成或终止待支付订单 | R:code:model/topup.go,code:controller/subscription_payment_stripe.go,code:common/url_validator.go | A:按支付状态处理充值和订阅并用本地订单号关联 | S:使用Stripe签名构造事件；仅已支付Checkout或异步支付成功会充值，订单状态校验保持重复回调幂等
+topup_waffo.go[EB8L]: F:用Waffo服务端支付方式创建充值订单并验签处理付款通知 | R:code:model/topup.go,code:constant/waffo_pay_method.go,code:common/quota_math.go | A:通过服务端方法表解析支付选项后建立结账单 | S:客户端只能选配置中的索引或完全匹配旧字段；Webhook签名有效且订单PAY_SUCCESS才充值
+topup_waffo_pancake.go[EB8L]: F:管理Waffo Pancake配置与产品并创建充值或订阅Checkout及Webhook结算 | R:code:model/topup.go,code:service/waffo_pancake.go,code:controller/subscription_payment_waffo_pancake.go | A:按交易号前缀区分充值和订阅并完成相应本地订单 | S:Webhook同时验证签名和路径环境与事件mode一致；订单映射还校验买家身份
+twofa.go[ES9M]: F:启动、启用和关闭用户2FA、查看状态及轮换恢复码，并提供管理员统计和强制禁用 | R:code:common/totp.go,code:model/twofa.go,code:controller/secure_verification.go | A:敏感变更要求当前登录会话和相应安全证明 | S:自助变更推进鉴权版本并轮换当前Session；管理员强制禁用后撤销目标用户全部Session
+upstream_provider.go[EI8M]: F:管理上游账户凭证、连接测试、余额同步、分组比较及批量生成本地渠道 | R:code:service/upstream_provider.go,code:model/upstream_provider.go,code:controller/channel.go | A:控制器将凭证输入交由service并审计提供方操作 | S:管理View不包含可复用凭证；审计只记提供方元数据，不记录密码、Token或TOTP Secret
+uptime_kuma.go[EO5S]: F:并发读取配置的Uptime Kuma公开状态页与心跳并聚合监控分组 | R:code:setting/console_setting,code:controller/misc.go | A:前端状态页获取各监控器状态和24小时可用率 | S:总请求30秒超时，每个HTTP请求10秒超时
+usedata.go[EO6S]: F:按用户或全站查询每日配额与流量用量时间序列 | R:code:model/usedata.go,code:model/usedata_flow.go | A:统计页面查询起止时间和可选用户名 | S:用户级流量查询强制限制在一个月内，管理员汇总接口可按更大范围查询
+user.go[ES9L]: F:编排密码登录注册、Session签发、用户资料管理、权限、删除、额度和兑换 | R:code:controller/auth_session.go,code:controller/secure_verification.go,code:controller/audit.go,code:service/auth_session.go,code:model/user.go | A:认证入口统一使用登录挑战和会话服务，管理接口按角色处理账户 | S:密码更改与自助删除需安全证明并轮换或撤销Session；用户DTO不含密码和管理PAT；仅Root可改AdminPermissions
+user_quota.go[EB8T]: F:执行管理员对指定用户额度增加、扣减或覆盖并生成成功与失败审计 | R:code:model/user_quota_adjustment.go,code:controller/audit.go | A:管理用户额度入口调用模型层原子调整 | S:按目标角色授权并遵守钱包额度上限；审计记录前后值、结果和失败类别
+vendor_meta.go[EC8S]: F:搜索、查询、新建、修改、删除模型供应商并预览或应用供应商合并操作 | R:code:model/vendor_meta.go,code:controller/model_meta.go | A:模型目录管理维护供应商元数据 | S:删除或合并遇到被引用冲突时返回409并附关联计数
+video_proxy.go[IS9L]: F:授权读取任务视频或插件产物并安全代理上游媒体内容 | R:code:controller/task.go,code:common/ssrf_protection.go,code:service/task_artifact.go | A:按用户/Artifact权限查询任务后转发Range与条件请求 | S:校验初始URL与每次重定向；凭证跨Origin跳转拒绝，credentialless跳转清除头和请求体；响应private no-store
+wechat.go[ES8S]: F:通过外部WeChat服务交换短期code完成登录注册或绑定当前账户 | R:code:service/auth_session.go,code:controller/secure_verification.go,code:common/trusted_proxies.go | A:新用户注册受开关控制，已有账户按WeChat ID恢复 | S:账户绑定需Session安全证明并在事务内仅更新绑定列；成功变更发送安全通知
+
+===/home/debian/ai/new-api/docs/===
+authentication.md[SS9S]: F:记录短期Access JWT、HttpOnly Refresh Cookie、DB Session、AuthFlow和Security Proof的浏览器鉴权契约 | R:code:controller/auth_session.go,code:service/auth_session.go,code:common/session_cookie.go | A:多节点部署和自定义客户端据此配置刷新、撤销和验证流程 | S:DB是Session最终权威；共享Redis即时传播撤销，独立Redis陈旧窗受SYNC_FREQUENCY限制；Refresh轮换并绑定Session SID
+ionet-client.md[SI2T]: F:记录io.net集群更新名称接口的HTTP方法、URL形状和成功响应示例 | R:code:pkg/ionet/client.go | A:排查名称更新请求时参考接口样例 | S:-
+translation-glossary.fr.md[SL5S]: F:规定法语界面中Prompt、Completion、Quota、Ratio、用户和渠道术语的标准译法 | R:code:docs/translation-glossary.md,code:docs/translation-glossary.ru.md | A:前端法语翻译保持术语一致 | S:计费语境固定使用Ratio；Completion统一译为Complétion
+translation-glossary.md[SL5T]: F:汇总中英术语并说明模型、用户、充值、渠道、安全和计费词汇使用约定 | R:code:docs/translation-glossary.fr.md,code:docs/translation-glossary.ru.md | A:翻译和文档编写据此统一术语 | S:Token需按API凭证、文本单位或系统访问令牌语境区分
+translation-glossary.ru.md[SL5S]: F:规定俄语界面中Prompt、Completion、Quota、Ratio、用户和渠道术语的标准译法 | R:code:docs/translation-glossary.md,code:docs/translation-glossary.fr.md | A:前端俄语翻译保持术语一致 | S:计费语境固定使用Коэффициент；Completion统一译为Вывод
+
+===/home/debian/ai/new-api/docs/channel/===
+other_setting.md[SC6T]: F:说明渠道强制格式、代理和reasoning内容转换设置及JSON格式 | R:code:common/proxy_url.go,code:common/endpoint_type.go | A:运维人员配置渠道级网络与格式行为 | S:运行时兼容剥离旧代理URL后缀但不改数据库；再次保存必须仅保留协议主机端口
+
+===/home/debian/ai/new-api/docs/installation/===
+BT.md[SV4S]: F:介绍通过宝塔Docker应用商店或Compose部署服务、配置密钥和持久化数据 | R:code:Dockerfile,code:docker-compose.yml | A:中文部署者按教程安装、开放端口并检查会话配置 | S:SESSION_SECRET必须设置强随机值；数据需挂载容器/data
+
+===/home/debian/ai/new-api/docs/openapi/===
+api.json[SG8L]: F:提供OpenAPI 3.0.1后台管理接口合同，覆盖136条系统、登录、权限、计费、渠道、Token和模型路由 | R:code:docs/openapi/relay.json,code:router/api-router.go | A:客户端或工具按管理API描述生成请求 | S:-
+relay.json[SN9L]: F:提供OpenAPI 3.0.1 AI网关接口合同，描述聊天、Responses、图片、视频、Claude、Gemini及音频接口 | R:code:docs/openapi/api.json,code:router/relay-router.go | A:API客户端按统一网关协议构造请求 | S:-
+
+===/home/debian/ai/new-api/docs/plugin-api/===
+README.md[SE9S]: F:概述Task Plugin v1生命周期、宿主与插件责任、Artifacts、Responses和安全边界 | R:code:docs/plugin-api/v1.md,code:docs/plugin-api/v1.d.ts,code:docs/plugin-api/v1.schema.json | A:插件开发者先按本指南确认宿主契约 | S:插件不能自行发网络请求、访问文件或结算；插件上传等同管理员配置上游凭证的信任决策
+v1.d.ts[IE8T]: F:以TypeScript声明Task Plugin v1 Manifest、Hook上下文、路由、任务和Artifact类型 | R:code:docs/plugin-api/v1.md,code:docs/plugin-api/v1.schema.json | A:插件作者在编辑器中获取API类型提示 | S:类型声明须与宿主和JSON Schema协议同步
+v1.md[SE9M]: F:定义Task Plugin v1 Manifest、路由、协议、Hook、用量事实、Artifact和轮询契约 | R:code:docs/plugin-api/README.md,code:docs/plugin-api/v1.d.ts,code:docs/plugin-api/v1.schema.json | A:插件实现及兼容性审查依据此版本化协议 | S:宿主控制路由、持久化、计费与结算；插件仅转换数据和提供用量事实，未知轮询状态计为失败
+v1.schema.json[FE8S]: F:以JSON Schema约束Task Plugin v1 Manifest、协议声明、路由及Usage字段结构 | R:code:docs/plugin-api/v1.md,code:docs/plugin-api/v1.d.ts | A:上传校验器使用机器可读结构定义 | S:拒绝未声明额外字段；usage数值单位、路由类型及protocol支持模式均受枚举和互斥规则限制
+
+===/home/debian/ai/new-api/dto/===
+channel_constraints.go[CN8S]: F:建模渠道固定Pin来源、优先级、过滤条件及约束合并结果 | R:code:service/channel_affinity.go,code:relay/common/relay_info.go | A:渠道选择合并Token约束和Origin Task亲和约束 | S:较小Rank优先；同渠道合并更严格的RetryMode，SingleAttempt会抑制重试
+midjourney.go[IN7S]: F:定义Midjourney提交、回调、查询、图片上传及任务状态响应DTO | R:code:relay/channel,code:controller/midjourney.go | A:Midjourney API适配器与任务轮询共享数据契约 | S:JSON字段名须与Midjourney Proxy上游协议保持稳定
+plugin_protocol.go[IN9T]: F:定义宿主OpenAI Responses响应对象、Usage和事件流的强类型DTO | R:code:controller/plugin_protocol.go,code:relay/plugin_protocol.go | A:插件协议状态机以这些类型生成非流与SSE返回 | S:事件可选字段用指针区分省略与显式空字符串或空数组
+suno.go[IN6T]: F:定义Suno提交、歌曲、歌词和通用任务查询响应DTO | R:code:relay/channel,code:service/task_polling.go | A:Suno适配器在提交与后台轮询间传递任务数据 | S:持久化Task.Data使用RawMessage保存上游响应
+task.go[CW8T]: F:定义跨任务平台错误、通用响应、任务视图及Task插件角色分层元数据 | R:code:model/task.go,code:controller/task.go,code:relay/channel/task | A:任务API和插件适配器共享任务返回结构 | S:AdminInfo和RootInfo承载不同权限级别的运维字段，普通任务视图不应泄露这些信息
+task_plugin.go[CW7T]: F:定义送入JavaScript任务插件的错误、公共TaskView和通用任务响应类型 | R:code:pkg/jsplugin/engine.go,code:controller/task_plugin.go | A:宿主按TaskData类型封装任务提交和查询响应 | S:TaskView刻意省略所有者、渠道、额度、Properties与私有上游任务ID
+video.go[IN6T]: F:定义跨渠道视频生成请求、提交回执、查询状态、结果媒体和错误DTO | R:code:relay/channel,code:controller/video_proxy.go | A:视频relay适配器复用统一请求和任务响应结构 | S:上游媒体URL通过独立任务内容代理暴露
+
+===/home/debian/ai/new-api/electron/===
+README.md[SV5T]: F:说明Electron桌面端依赖、开发启动、跨平台构建产物和本地数据目录 | R:code:electron/package.json,code:electron/build.sh,code:electron/main.js | A:桌面端开发者据此启动与打包 | S:-
+build.sh[FV7T]: F:先安装并构建前端，再以CGO构建当前操作系统Go程序并打包Electron | R:code:web/package.json,code:go.mod,code:electron/package.json | A:在electron目录执行统一桌面构建脚本 | S:构建目标由脚本执行所在OS决定，构建Go程序启用CGO
+create-tray-icon.js[FV3T]: F:生成macOS模板菜单栏图标及副本PNG资源 | R:code:electron/package.json | A:桌面包构建使用输出图标 | S:canvas不可用时回退为1x1透明PNG
+entitlements.mac.plist[FV6T]: F:声明macOS Electron程序的JIT、动态库及网络权限 | R:code:electron/package.json | A:electron-builder签名配置读取权限列表 | S:授权unsigned executable memory、JIT及关闭library validation
+main.js[RV8L]: F:启动桌面窗口与Go服务、选择SQLite数据目录、创建托盘并管理退出 | R:code:electron/preload.js,code:electron/package.json,code:main.go | A:生产模式启动内置二进制，开发模式连接现有本地前后端 | S:窗口启用contextIsolation并禁用nodeIntegration；关窗口默认驻留托盘，退出时先SIGTERM后限时SIGKILL
+package-lock.json[FV3L]: F:锁定Electron桌面项目npm依赖树及精确安装版本 | R:code:electron/package.json | A:使用npm ci或安装锁文件约束的依赖 | S:-
+package.json[FV7S]: F:定义Electron启动开发脚本和macOS、Windows、Linux构建及发布资源 | R:code:electron/main.js,code:electron/preload.js,code:electron/entitlements.mac.plist | A:electron-builder按平台生成安装包并附带后端与法律文件 | S:窗口入口和preload列入文件清单；各平台包都带项目与Electron许可声明
+preload.js[RS6T]: F:通过contextBridge向桌面前端仅暴露Electron版本、平台和数据目录信息 | R:code:electron/main.js | A:React应用检测桌面环境并展示本地数据位置 | S:BrowserWindow开启contextIsolation且关闭nodeIntegration
+
+===/home/debian/ai/new-api/i18n/===
+i18n.go[CL8M]: F:加载嵌入式英文、简体中文和繁体中文YAML并按用户设置或请求语言本地化 | R:code:i18n/keys.go,code:i18n/locales/en.yaml,code:middleware/i18n.go | A:将common.TranslateMessage接到共享翻译器 | S:语言优先级为用户设置、上下文、Accept-Language，最终回退英文
+keys.go[CL6M]: F:集中维护后端Common、Auth、User、Billing、Channel和OAuth消息键常量 | R:code:i18n/i18n.go,code:i18n/locales/en.yaml | A:后端控制器使用常量引用本地化消息 | S:消息键必须与每个嵌入YAML目录匹配
+
+===/home/debian/ai/new-api/i18n/locales/===
+en.yaml[SL6M]: F:提供英文后端错误和提示文案，覆盖认证、账单、渠道、任务、部署和权限 | R:code:i18n/keys.go,code:i18n/locales/zh-CN.yaml,code:i18n/locales/zh-TW.yaml | A:英文作为Go后端不支持语言的最终回退 | S:消息ID需与keys.go一致并保留模板占位符
+zh-CN.yaml[SL6M]: F:提供简体中文后端错误和提示文案，覆盖认证、账单、渠道、任务、部署和权限 | R:code:i18n/keys.go,code:i18n/locales/en.yaml,code:i18n/locales/zh-TW.yaml | A:按MessageID向简体中文用户返回本地化文案 | S:消息ID需与keys.go一致并保留模板占位符
+zh-TW.yaml[SL6M]: F:提供繁体中文后端错误和提示文案，覆盖认证、账单、渠道、任务、部署和权限 | R:code:i18n/keys.go,code:i18n/locales/en.yaml,code:i18n/locales/zh-CN.yaml | A:按MessageID向繁体中文用户返回本地化文案 | S:消息ID需与keys.go一致并保留模板占位符
+
+===/home/debian/ai/new-api/logger/===
+logger.go[CO7S]: F:按级别写结构化上下文日志、轮转文件、Quota格式及当前日志路径 | R:code:common/sys_log.go,code:common/constants.go,code:controller/performance.go | A:服务、任务和HTTP请求共享日志设施 | S:请求日志携带request ID，无上下文的任务标记SYSTEM；日志轮转通过LogWriterMu协调Writer切换
+
+===/home/debian/ai/new-api/middleware/===
+audit.go[MO9M]: F:为管理写请求提供自动审计，并为Token及PAT操作记录有限元数据和结果 | R:code:controller/audit.go,code:model/audit_log.go,code:constant/context_key.go | A:鉴权中间件包裹写响应并在Handler完成后回退记录 | S:响应捕获最多64KiB；PAT审计仅存指纹与结果，不持久化原始请求体或Token
+auth.go[MS9L]: F:验证Dashboard JWT Session、PAT和API Token并设置角色、权限与请求上下文 | R:code:service/auth_session.go,code:model/token.go,code:service/authz,code:middleware/audit.go | A:User、Admin、Root和Token认证中间件保护路由 | S:PAT没有SessionID，不能调用Session管理或Session绑定安全证明；API Token还检查用户、IP、组、模型限制及额度状态
+auth_origin.go[MS8T]: F:在Secure Cookie模式下验证refresh/logout浏览器Origin或Referer | R:code:common/session_cookie.go,code:controller/auth_session.go | A:仅Cookie认证端点安装此OriginGuard | S:精确同源或配置Origin匹配，多个Origin、非法Referer和未允许来源均拒绝；不改变CORS
+body_cleanup.go[MR5T]: F:在请求结束时释放共享请求体存储和暂存文件源 | R:code:common/gin.go,code:common/body_storage.go,code:service/file_source.go | A:请求链最外层清理中间件defer释放资源 | S:清理在Handler返回后执行，即使处理中断或发生panic
+cache.go[MP4T]: F:为静态页面根路径和其他静态资源设置Cache-Control与Cache-Version | R:code:router/router.go,code:middleware/disable-cache.go | A:Web资源路由复用缓存中间件 | S:根页面需重新验证，其他资源缓存一周
+cors.go[MN6T]: F:创建Gin CORS策略并添加API版本响应头 | R:code:main.go,code:router/router.go | A:HTTP服务器注册CORS和Version中间件 | S:当前CORS允许任意Origin并启用Credentials
+disable-cache.go[MR4T]: F:为敏感或动态响应覆盖缓存策略并禁止浏览器与代理持久缓存 | R:code:router/router.go,code:middleware/cache.go | A:认证与动态路由调用时写入no-store/no-cache | S:设置Cache-Control、Pragma和Expires三个禁缓存头
+distributor.go[MN9L]: F:从JSON、表单、Gemini路径或异步任务提取模型并按Pin、亲和性、组、Token限制选渠道 | R:code:dto/channel_constraints.go,code:model/channel_satisfy.go,code:service/channel_affinity.go,code:pkg/jsplugin/registry.go | A:验证模型约束后写入选中渠道及协议上下文并在成功后记录亲和性 | S:固定渠道和Task插件身份不匹配时拒绝；JSON顶层model重复或非字符串请求拒绝；Auto组仅从用户可用组中选择
+email-verification-rate-limit.go[MS7T]: F:限制邮箱验证码发送频次，优先使用Redis固定窗口并在异常时回退内存 | R:code:middleware/rate-limit.go,code:controller/misc.go | A:发送验证码路由按ClientIP应用限流 | S:每IP每30秒最多两次；Redis故障时使用本机独立限流器
+gzip.go[MN8T]: F:解压gzip、Brotli或Zstandard请求体并套用HTTP字节上限 | R:code:constant/env.go,code:common/gin.go,code:main.go | A:请求体解析前去除Content-Encoding并传递解压内容 | S:大小限制在解压后应用以防压缩炸弹；GET请求不解压
+header_nav.go[MU6S]: F:按HeaderNavModules配置判断导航模块启用状态及其公开或需登录访问模式 | R:code:middleware/auth.go,code:common/redis.go | A:前端模块API路由根据配置选择UserAuth或TryUserAuth | S:模块禁用时公共/用户入口分别拒绝或强制登录，配置格式错误回退默认访问策略
+i18n.go[ML6T]: F:按登录用户语言、Accept-Language和默认值的优先级设置请求语言上下文 | R:code:i18n/i18n.go,code:constant/context_key.go,code:middleware/auth.go | A:后端本地化消息从Gin上下文读取当前语言 | S:用户设置和请求头中的语言仅在后端支持列表内生效
+logger.go[MO8T]: F:配置Gin请求日志格式并附加路由标签和请求ID | R:code:main.go,code:middleware/request-id.go,code:middleware/task_artifact_access.go | A:服务启动时安装日志中间件并记录状态、延迟、客户端IP、方法和路径 | S:任务产物访问能力参数和OAuth回调一次性code及state会从日志路径中移除或剥离查询串，但原请求仍保留给处理器
+model-rate-limit.go[MP8M]: F:按用户及可选用户组配置限制模型请求总数与成功请求数 | R:code:common/limiter/limiter.go,code:middleware/rate-limit.go,code:constant/context_key.go | A:在relay请求链中选择Redis或进程内限流并返回兼容错误 | S:总请求数包含失败请求，成功数仅在响应状态低于400时累计；Redis限流失败会拒绝请求
+performance.go[MP7T]: F:在性能监控启用时按CPU、内存和磁盘阈值拒绝过载请求 | R:code:common/performance_config.go,code:common/system_monitor.go,code:main.go | A:请求进入relay前返回协议兼容的503错误 | S:/v1/messages使用Claude错误形状，其他过载请求使用OpenAI错误形状
+rate-limit.go[MP8M]: F:提供按客户端IP或认证用户执行的Web、API、关键操作、上传下载和搜索限流 | R:code:common/limiter/limiter.go,code:router/router.go,code:middleware/auth.go | A:路由按需安装Redis或进程内限流器并以429与Retry-After拒绝超额请求 | S:Redis计数由单个Lua脚本原子递增与设定过期时间，固定窗口边界可能短时突发至两倍限额；用户级限流必须在认证后运行
+recover.go[MR7T]: F:捕获relay请求处理链中的panic、记录堆栈并返回服务器错误 | R:code:main.go,code:common/sys_log.go,code:logger/logger.go | A:作为Gin中间件保护后续处理器 | S:堆栈写入服务端日志，响应错误消息包含panic值
+request-id.go[MO6T]: F:为每个请求生成并传播请求ID | R:code:common/utils.go,code:constant/context_key.go,code:logger/logger.go | A:将ID放入Gin和Request上下文并返回同名响应头供日志关联 | S:下游日志与错误响应依赖稳定的请求ID上下文键
+request_body_limit.go[MN7T]: F:限制匿名请求体字节数并重建可供后续处理器读取的请求流 | R:code:common/request_body_limit.go,code:constant/env.go,code:common/gin.go | A:在匿名请求路由限制开始处检查并缓存请求体 | S:超限返回413，读取错误返回400；该中间件只对未认证请求链安装
+secure_verification.go[MS9T]: F:为渠道密钥读取构造动作上下文并校验浏览器安全证明 | R:code:service/verification.go,code:controller/channel.go,code:model/auth_flow.go | A:敏感路由通过当前登录Session和通用证明服务完成授权 | S:证明必须匹配指定操作及渠道ID；缺失、过期、已消费或上下文不符时拒绝请求
+stats.go[MO5T]: F:以原子计数跟踪当前HTTP活动请求数 | R:code:main.go,code:controller/performance.go | A:管理性能接口读取活动连接数快照 | S:请求计数在处理器返回或发生panic时均由defer递减
+task_artifact_access.go[MS9M]: F:验证任务产物访问能力并限制匿名请求的无效尝试与并发下载 | R:code:service/task_artifact.go,code:controller/video_proxy.go,code:middleware/logger.go | A:兼容Bearer Token或绑定任务及产物键的能力令牌访问私有内容 | S:能力令牌在读取数据库前校验，访问查询参数会从URL移除；每IP无效尝试限速且按全局、IP和对象限制并发
+task_plugin.go[ME9L]: F:固定插件Registry generation并解析声明式任务路由及共享Responses请求 | R:code:pkg/jsplugin/registry.go,code:controller/plugin_protocol.go,code:middleware/distributor.go,code:service/task_billing.go,code:dto/plugin_protocol.go | A:调用插件解码或渲染Hook，将合法提交转换为带插件身份约束的任务请求 | S:插件只能处理其声明模型和协议模式；查询路由在渠道分发与计费前结束，提交身份由宿主固定并供后续路由与结算校验
+task_plugin_model.go[ME6T]: F:在JSON请求体中替换顶层model字段并更新共享请求体存储 | R:code:middleware/task_plugin.go,code:common/body_storage.go | A:插件共享端点规范化模型名后保留后续relay可重读的请求流 | S:仅处理application/json或+json类型，其他媒体类型保持原请求体不变
+trusted_proxies.go[MS8T]: F:把TRUSTED_PROXIES环境配置解析为Gin客户端IP信任边界 | R:code:common/trusted_proxies.go,code:common/init.go | A:服务器初始化时应用默认或显式代理CIDR | S:空配置为兼容性信任回环、RFC1918与IPv6 ULA；none须单独使用且显式列表完全替代默认网段
+turnstile-check.go[MI7T]: F:向Cloudflare Turnstile校验请求中的挑战令牌 | R:code:constant/env.go,code:common/constants.go,code:router/router.go | A:受保护入口在后续处理前验证挑战结果 | S:令牌缺失、验证失败或远端请求错误都会中止请求并返回success=false
+utils.go[MG5T]: F:统一输出OpenAI或Midjourney错误并记录请求错误日志 | R:code:middleware/task_plugin.go,code:dto/task_plugin.go,code:logger/logger.go | A:中间件按协议入口调用对应错误响应辅助函数 | S:插件路由存在时优先使用插件声明的错误响应格式
+
+===/home/debian/ai/new-api/model/===
+ability.go[PB8M]: F:维护用户组、模型与渠道的可用能力映射并按优先级和权重选出路由渠道 | R:code:model/channel.go,code:model/channel_cache.go,code:model/channel_satisfy.go,code:dto/channel_constraints.go | A:渠道增改删及relay分发通过Ability查询或重建可路由能力 | S:唯一键由group、model和channel组成；约束过滤后先按Priority选择重试层，再按Weight随机选择
+account_security.go[PS9S]: F:在Session身份、账户状态和当前凭证复核后执行密码更新及外部登录解绑 | R:code:model/auth_flow.go,code:service/auth_session.go,code:service/account_security.go,code:model/user.go | A:账户安全服务在事务中仅更新授权字段并检查剩余登录方式 | S:解绑不得移除最后一种启用的登录方式；密码变更在锁定事务中重验Session与当前密码并递增AuthVersion
+audit_log.go[PO8M]: F:将独立安全与管理审计事件写入日志库并按角色和筛选条件查询 | R:code:controller/audit.go,code:middleware/audit.go,code:model/audit_other.go,code:common/database.go | A:记录登录、安全、操作和访问令牌事件并支持ClickHouse日志库 | S:仅保存安全请求元数据而不存原始URL、查询串、请求体或可用凭证；普通用户和管理员视图会剥离更高权限字段
+audit_other.go[PO7T]: F:定义分层审计元数据结构并实现数据库JSON读写 | R:code:model/audit_log.go,code:controller/audit.go | A:按用户、管理员和Root投影不同审计附加信息 | S:AuditFields读取时保留原始JSON数值，避免大整数经float64往返丢失精度
+auth_flow.go[PS9M]: F:保存OAuth、Passkey、TOTP与安全证明等短期认证流程状态并原子消费 | R:code:service/auth_session.go,code:service/verification.go,code:controller/oauth.go,code:model/user_session.go | A:认证控制器以不透明token读取、验证并一次性完成对应动作 | S:数据库仅存使用SessionSecret生成的token HMAC；消费与动作同事务执行，唯一token哈希和过期检查阻止重放
+authz_role.go[PI7T]: F:定义可配置授权角色的键、名称、启用状态和排序信息 | R:code:service/authz/role.go,code:service/authz/registry.go,code:model/casbin_rule.go | A:权限服务读取角色并组合资源动作授权策略 | S:角色Key唯一且内置角色与自定义角色共用持久化表
+casbin_rule.go[PI8T]: F:定义Casbin策略语句的ptype与v0至v5字段及复合索引 | R:code:service/authz/registry.go,code:service/authz/role.go,code:model/authz_role.go | A:Casbin适配器通过此模型持久化权限策略 | S:七个规则字段具有联合唯一约束，阻止相同策略重复写入
+channel.go[PB9L]: F:持久化上游渠道凭证、协议类型、模型分组、路由权重、倍率状态和渠道设置 | R:code:model/ability.go,code:model/channel_cache.go,code:controller/channel.go,code:common/upstream_credential_crypto.go,code:service/upstream_provider.go | A:渠道管理与relay路由通过CRUD、Key轮询及配置解码使用渠道状态 | S:普通列表查询省略Key，敏感读取由控制器单独验证审计；UpdateAbilities须与完整已更新渠道状态同步调用
+channel_cache.go[CP8M]: F:把数据库渠道与Ability重建为按用户组和模型索引的并发内存路由缓存 | R:code:model/channel.go,code:model/ability.go,code:model/channel_satisfy.go,code:setting/ratio_setting/routing.go | A:relay热路径按优先级和权重选渠道，禁用内存缓存时回退数据库查询 | S:更新渠道缓存释放channelSyncLock后才可失效定价缓存，避免与定价读取形成反向锁顺序死锁
+channel_constraint.go[DB8T]: F:按请求路径和任务插件身份过滤候选渠道并报告首个失败约束 | R:code:dto/channel_constraints.go,code:model/channel.go,code:model/channel_cache.go,code:middleware/distributor.go | A:数据库和缓存分发路径共用同一渠道匹配谓词 | S:过滤顺序固定为request_path后task_plugin_identity；插件身份约束要求精确匹配插件Key
+channel_satisfy.go[DB7T]: F:判断指定渠道是否仍为用户组和模型提供启用能力 | R:code:model/ability.go,code:model/channel_cache.go,code:middleware/distributor.go | A:亲和性或约束检查按配置读取内存索引或查询Ability表 | S:精确模型无匹配时按RoutingMatchModelName规范化名称再次检查
+checkin.go[PB6S]: F:存储用户按日签到记录并发放随机配置额度奖励 | R:code:setting/operation_setting/checkin_setting.go,code:model/user.go,code:controller/checkin.go | A:签到接口查询日期记录、统计月份结果并执行领取 | S:用户与日期联合唯一约束防止重复签到；SQLite按顺序写入并在加额度失败时删除记录，MySQL与PostgreSQL使用事务
+custom_oauth_provider.go[PI9M]: F:持久化自定义OAuth或OIDC提供方端点、字段映射、凭证和用户访问策略 | R:code:oauth/generic.go,code:controller/custom_oauth.go,code:controller/oauth.go,code:model/auth_flow.go | A:提供方管理与OAuth登录流程按Slug查找配置并验证策略结构 | S:ClientSecret不进入JSON响应；Slug唯一且保留telegram内置身份，访问策略操作符和嵌套组均受校验
+db_time.go[CG6T]: F:读取主数据库当前Unix秒时间并在查询失败时回退应用时钟 | R:code:common/database.go,code:model/main.go | A:需要跨多实例一致时间的模型逻辑调用GetDBTimestamp | S:PostgreSQL、SQLite和MySQL分别使用方言专属时间函数
+email_binding.go[PS9M]: F:管理绑定邮箱的短期验证码流程并在事务中完成新地址更新 | R:code:model/auth_flow.go,code:model/account_security.go,code:service/account_security.go,code:controller/email_binding.go | A:账户安全服务创建、重发、读取并完成当前Session的邮箱绑定 | S:Flow仅保存验证码哈希与已消费授权；重发保留原截止时间和失败计数，连续五次失败后锁定
+errors.go[CG6T]: F:集中定义数据库、用户认证、Token、兑换与二次验证流程共享的哨兵错误 | R:code:model/auth_flow.go,code:model/redemption.go,code:model/account_security.go | A:控制器和服务通过errors.Is识别并映射稳定业务失败 | S:-
+external_identity_claim.go[PS9S]: F:持久化外部提供方身份归属并为Telegram登录绑定及解绑提供事务操作 | R:code:model/auth_flow.go,code:model/user.go,code:controller/oauth.go,code:controller/wechat.go | A:登录回调以provider与subject查找或原子认领用户身份 | S:双联合唯一索引保证每个提供方身份和每个用户槽位均只有一个所有者；迁移遇到旧重复绑定会失败关闭
+frontend_option_migration.go[PC7M]: F:把停用的旧前端选项迁移或规范化为当前分层控制台配置 | R:code:model/option.go,code:setting/console_setting,code:model/main.go | A:数据库初始化时分别迁移主题、API信息、公告、FAQ及Uptime Kuma设置 | S:每项迁移独立事务；目标已存在时删除旧来源而保留目标，无法验证的值记录错误并留待处理
+gorm_logger.go[PO8T]: F:配置GORM慢查询日志并在非调试模式下清理数据库驱动错误中的内联值 | R:code:model/main.go,code:model/migration_dialector.go,code:common/env.go | A:主库和日志库打开连接时共用该日志与错误脱敏策略 | S:DEBUG关闭时参数化查询并将数据库错误压缩为方言错误码；DEBUG开启会保留原始错误内容
+locking.go[PR9T]: F:按主数据库方言为GORM查询附加更新行锁 | R:code:model/main.go,code:model/auth_flow.go,code:model/redemption.go | A:事务中调用lockForUpdate保护认证状态和一次性业务记录 | S:SQLite跳过不支持的FOR UPDATE语法；MySQL与PostgreSQL使用GORM UPDATE锁子句，禁止使用GORM v1旧Set写法
+log.go[PO9L]: F:写入消费、充值、错误和任务计费日志并提供管理员及用户查询统计与保留清理 | R:code:service/billing.go,code:service/task_billing.go,code:controller/log.go,code:model/log_other.go,code:model/main.go | A:按独立日志库方言执行检索、聚合和旧日志删除 | S:ClickHouse日志没有稳定自增ID，接口按创建时间和request_id排序并生成仅用于显示的分页ID；用户查询会剥离管理与Root字段
+log_other.go[PO8M]: F:将用量日志附加信息分为公开、管理员、Root和审计可见范围 | R:code:model/log.go,code:controller/audit.go,code:service/log_info_generate.go | A:记录器按访问者角色序列化或投影日志元数据 | S:公开写入拒绝保留敏感键；用户与管理员视图移除高权限字段且保留原始JSON数值以避免大整数精度损失
+login_verification.go[PS9T]: F:从数据库投影无凭证秘密的登录验证状态并原子消费验证Flow后签发Session | R:code:model/auth_flow.go,code:model/passkey.go,code:model/user_session.go,code:service/auth_session.go | A:登录服务据密码、2FA锁定与Passkey状态验证并创建会话 | S:锁定用户后在同一事务消费一次性登录授权、复核AuthVersion并检查活动Session数和签发频率上限
+main.go[PR9L]: F:选择并初始化主数据库和独立日志库、设置连接池并执行模型Schema迁移 | R:code:common/database.go,code:model/migration_dialector.go,code:model/gorm_logger.go,code:model/locking.go,code:model/log.go | A:主节点启动时迁移SQLite、MySQL或PostgreSQL主库及可选ClickHouse日志库 | S:ClickHouse仅可作日志库；MySQL与PostgreSQL需具备64位用户钱包列，旧32位Schema会在迁移前拒绝启动
+midjourney.go[PW8M]: F:保存Midjourney图像和视频任务状态、结果媒体、渠道及计费归属 | R:code:controller/midjourney.go,code:service/task_billing.go,code:controller/system_task_handlers.go | A:用户和管理员按任务条件查询，后台轮询更新进度并进行状态竞争更新 | S:UpdateWithStatus以来源状态执行条件更新，只有成功转换状态的执行者可继续后续结算
+migration_dialector.go[PR8T]: F:包装MySQL和PostgreSQL GORM Migrator以归一化等价默认值及CHAR列类型比较 | R:code:model/main.go,code:model/option_primary_key_migration.go | A:数据库启动迁移使用自定义Schema比较器避免重启重复改表 | S:仅跳过MySQL等值decimal默认值差异并将PostgreSQL bpchar规范为char；列长度和实际类型变更仍交给原Migrator检查
+missing_models.go[CB5T]: F:列出已启用渠道能力中尚未登记模型目录元数据的精确模型名 | R:code:model/ability.go,code:model/model_meta.go,code:controller/model_meta.go | A:管理端据结果补齐模型目录记录 | S:只比较当前启用能力并按完整模型名匹配
+model_extra.go[CG5T]: F:从定价缓存读取模型可用用户组及配额类型 | R:code:model/pricing.go,code:model/ability.go | A:模型路由和计费查询复用缓存投影 | S:查询前调用GetPricing以按需刷新过期缓存
+model_meta.go[PB9L]: F:管理模型目录、匹配规则、供应商关系、端点元数据、可见性及渠道连接投影 | R:code:model/ability.go,code:model/channel.go,code:model/pricing.go,code:controller/model_meta.go,code:model/vendor_meta.go | A:目录接口按精确或名称规则搜索并生成模型广场和连接视图 | S:元数据规则优先级为exact、prefix、suffix、contains；从渠道移除模型仅支持exact记录，禁用元数据不等同禁用渠道能力
+model_metadata_sync.go[PC8M]: F:以预览记录版本校验并事务应用上游模型及供应商目录选定字段 | R:code:controller/model_sync.go,code:model/model_meta.go,code:model/vendor_meta.go,code:model/option.go | A:管理员选择创建或更新的模型字段后原子提交并刷新定价 | S:应用前先验证全部选择和共享Vendor版本；记录版本改变或官方同步被禁用时返回冲突，要求重新预览
+model_pricing_config.go[PC9M]: F:生成模型价格编辑快照、验证倍率或计费表达式并事务保存所选变更 | R:code:controller/model_pricing_config.go,code:model/option.go,code:setting/billing_setting/builtin_billing.go,code:pkg/jsplugin/registry.go | A:价格编辑器以配置版本提交并同步运行时定价与公开缓存 | S:更新须通过ExpectedVersion冲突检查；表达式先冒烟验证，数值必须有限且非负；内建表达式仅作为有效默认展示且不覆盖管理员显式设置
+option.go[PC9L]: F:持久化全局键值配置并将启动选项映射到运行时开关、付款、认证、速率和模型设置 | R:code:controller/option.go,code:setting/config/config.go,code:model/frontend_option_migration.go,code:model/model_pricing_config.go,code:model/main.go | A:启动时装载数据库Option并在更新后同步注册配置和传统全局状态 | S:分层model pricing选项必须走专用事务更新；bulk更新先完整提交数据库事务再逐项发布运行态
+option_primary_key_migration.go[PR9M]: F:检查并重建缺少Key唯一约束的Options表 | R:code:model/main.go,code:model/option.go,code:model/model_metadata_sync.go,code:model/model_pricing_config.go | A:数据库启动时跨方言修复选项主键并验证新表索引 | S:重建前按Key去重、保留最后一个Value并将旧表留作备份；MySQL命名锁、PostgreSQL advisory锁及事务串行化修复
+passkey.go[PS9M]: F:持久化WebAuthn凭证并转换库内Credential、传输方式与认证器状态 | R:code:controller/passkey.go,code:service/passkey,code:model/login_verification.go,code:model/auth_flow.go | A:Passkey注册、断言计数更新、撤销和登录读取使用凭证模型 | S:每用户仅存一项凭证；断言只更新使用状态，注册或删除需验证Session时递增AuthVersion并发布鉴权缓存
+password_crypto.go[PS8T]: F:将浏览器登录加密私钥持久化并在各服务副本启动时加载共享密钥 | R:code:common/password_crypto.go,code:model/main.go,code:controller/login_verification.go | A:启动初始化在缺少active槽时生成并保存密钥，再读取数据库赢家 | S:私钥仅由此独立内部模型保存且不序列化到API；跨副本依赖共同数据库中的唯一active槽
+perf_metric.go[PO7S]: F:按模型、用户组和时间桶累加relay请求、成功率、延迟及生成用量 | R:code:pkg/perf_metrics/metrics.go,code:controller/perf_metrics.go,code:model/pricing.go | A:性能仪表盘查询时间范围内的模型汇总或桶序列 | S:聚合冲突键为model_name、group与bucket_ts，Upsert只累加指标不覆盖既有桶
+prefill_group.go[PC6S]: F:存储按类型分类的可复用预填组名称、说明和JSON项目列表 | R:code:controller/prefill_group.go,code:model/prefill_group_migration.go | A:管理界面按组类型读取并维护提示词或模型配置集合 | S:名称仅在未软删除记录中唯一；JSONValue向PostgreSQL写入string以避免simple protocol按bytea处理
+prefill_group_migration.go[PR8M]: F:把PostgreSQL预填组名称全局唯一约束迁移为仅活动记录唯一索引 | R:code:model/main.go,code:model/prefill_group.go | A:AutoMigrate前检查并事务修复已知旧约束 | S:只自动移除已知legacy唯一对象；未知冲突会拒绝改表，目标部分索引无效或定义不同也会失败
+pricing.go[PC9L]: F:聚合可用模型组、定价倍率、供应商元数据、端点能力与任务插件计费Schema | R:code:model/ability.go,code:model/model_meta.go,code:model/channel_cache.go,code:model/model_pricing_config.go,code:model/pricing_default.go,code:pkg/jsplugin/registry.go | A:客户端目录与计费路由读取一分钟缓存或强制刷新后发布模型价格和端点视图 | S:模型Catalog规则禁用条目会从公开定价隐藏但不删除渠道能力；模型缓存持锁顺序固定为pricing锁再取channel锁
+pricing_default.go[PC6S]: F:按模型名规则推断默认供应商并生成静态展示图标和供应商行 | R:code:model/pricing.go,code:model/model_meta.go,code:model/vendor_meta.go | A:定价聚合缺少人工元数据时构建展示用模型供应商映射 | S:默认Vendor使用负数展示ID且只存在于定价投影，不会写入或重建数据库记录
+pricing_refresh.go[CG5T]: F:同步强制重算模型定价与端点能力缓存 | R:code:model/pricing.go,code:model/model_meta.go | A:需要立即读取最新管理变更的内部接口调用RefreshPricing | S:刷新同时获取定价与端点缓存锁并在重算期间阻塞并发刷新
+quota_reserve.go[PB9M]: F:并发安全地预扣用户或Token额度并将Redis缓存增量持久化到主库 | R:code:service/billing.go,code:model/user_cache.go,code:model/token_cache.go,code:model/user.go,code:model/token.go | A:relay计费在结算前校验余额，缓存不可用时回退数据库条件更新 | S:预扣脚本原子核对缓存身份和余额；数据库写入失败会补偿缓存，补偿也失败时记录系统错误
+redemption.go[PB8M]: F:管理有状态、可到期兑换码并在用户兑换时增加钱包额度 | R:code:controller/redemption.go,code:model/user.go,code:model/topup.go,code:common/quota_math.go | A:兑换接口事务验证状态和期限后标记使用、入账并生成充值日志 | S:额度必须为正且低于钱包安全边界；单次兑换条件更新与入账处于同一事务，阻止并发重复兑付
+setup.go[PC6T]: F:保存首次初始化版本和完成时间并读取安装状态记录 | R:code:constant/setup.go,code:controller/setup.go,code:model/main.go | A:服务启动与安装路由通过GetSetup判断系统是否完成初始化 | S:初始化完成以数据库Setup记录为权威，记录缺失时由启动检查结合Root用户状态恢复
+subscription.go[PB9L]: F:管理订阅套餐、支付订单与用户订阅周期、额度重置、钱包回退及用户组升降级 | R:code:controller/subscription.go,code:model/topup.go,code:model/user.go,code:model/subscription_payment_stripe.go,code:model/quota_reserve.go | A:订阅购买和支付回调创建或结算套餐快照，后台处理到期与额度周期 | S:订单完成和订阅快照在同一事务并核对支付提供方；按request_id唯一记录订阅预扣，退款幂等且不得使已用额度低于零或超过套餐总额
+system_instance.go[PO7S]: F:按节点名维护集群实例信息与最近心跳并计算在线或过期状态 | R:code:common/node_identity.go,code:controller/system_info.go,code:main.go | A:启动和后台心跳通过Upsert刷新实例，运维接口列举及清理旧节点 | S:超过90秒无心跳即视为stale，单节点删除仅允许匹配仍过期的记录
+system_task.go[PW9L]: F:持久化后台任务状态、payload、执行进度、结果及每类任务的跨节点租约 | R:code:service/system_task.go,code:controller/system_task_handlers.go,code:main.go | A:Runner创建任务、领取pending执行并续租或完成任务 | S:同类型活动任务由唯一active_key抑制重复；状态写入和完成必须匹配持有者及未过期租约
+task.go[PW9L]: F:持久化跨平台异步任务状态、媒体结果、私有上游数据及预扣结算上下文 | R:code:relay/channel/task,code:service/task_billing.go,code:service/task_polling.go,code:controller/task.go,code:model/task_plugin.go | A:提交时保存任务来源与计费快照，轮询、查询和结算复用同一状态 | S:PrivateData不向用户序列化且含上游密钥和结算信息；触发退款或结算的状态迁移必须使用CAS，不能用无条件TaskBulkUpdateByID
+task_model_alias.go[CE8M]: F:从启用渠道的模型映射构建插件声明模型的别名路由视图 | R:code:model/channel.go,code:pkg/jsplugin/routing.go,code:middleware/task_plugin.go,code:model/channel_cache.go | A:共享协议端点按当前Registry generation解析别名并定位任务插件 | S:视图按generation和60秒缓存；映射到多插件的名称丢弃，同一插件存在多个声明尾名时仅展示而不用于路由Pin
+task_plugin.go[PE8M]: F:持久化任务插件源码、版本、SHA、启用及活动版本状态并提供同步快照 | R:code:pkg/jsplugin/registry.go,code:controller/task_plugin.go,code:model/task.go,code:plugins/embed.go | A:管理操作提交后各节点据确定性Revision同步并发布Registry generation | S:相同Key和Version拒绝不同SourceHash；激活在事务中切换版本，删除活动版本后提升最近版本
+token.go[PI9L]: F:管理用户API Token凭证、有效期、剩余额度、分组、模型白名单和IP限制 | R:code:controller/token.go,code:middleware/auth.go,code:model/token_cache.go,code:model/quota_reserve.go | A:认证中间件据Token状态和用户约束授权请求并执行配额扣减 | S:Key是唯一Bearer凭证；更新或删除前设置Redis变更Fence并清缓存，避免旧快照重新生效
+token_cache.go[CI8S]: F:以Redis哈希缓存Token授权元数据与额度并用变更Fence阻止旧值复活 | R:code:model/token.go,code:model/quota_reserve.go,code:common/hash.go | A:Token读取优先使用缓存，缺失或Fence命中时回查主库 | S:Redis键以HMAC派生；热缓存初始化只续期而不覆盖已原子预扣的额度
+token_migration.go[PR9M]: F:把PostgreSQL旧Token.Key唯一约束迁移为模型声明的独立唯一索引 | R:code:model/main.go,code:model/token.go | A:AutoMigrate前识别并替换受支持的遗留索引对象 | S:仅接受已知约束名和有效单列唯一索引；未知定义、延迟约束或NULLS NOT DISTINCT会拒绝自动改表
+topup.go[PB9L]: F:存储充值订单并处理易支付、Stripe、Creem和Waffo回调及管理员补单 | R:code:controller/topup.go,code:controller/topup_stripe.go,code:controller/topup_creem.go,code:controller/topup_waffo.go,code:model/redemption.go,code:common/quota_math.go | A:提供方回调校验后锁定订单、转换额度、写充值状态并更新用户钱包 | S:订单和余额在同一事务结算且检查钱包上限；充值量由严格Decimal转换得到，数据库条件更新防止并发回调超限
+twofa.go[PS9M]: F:存储TOTP因子及备用码哈希并执行锁定、失败计数、使用记录和停用 | R:code:controller/twofa.go,code:common/totp.go,code:model/twofa_enrollment.go,code:model/user_auth_cache.go | A:登录和账户安全流程验证动态码或一次性备用码并更新因子状态 | S:TOTP秘密和备用码哈希不进入JSON；达到失败阈值后锁定，启停或轮换凭证会推进AuthVersion使旧Session失效
+twofa_enrollment.go[PS9S]: F:创建并确认绑定当前Session的2FA注册Flow和待启用TOTP因子 | R:code:controller/twofa.go,code:model/auth_flow.go,code:model/twofa.go,code:model/user_session.go | A:账户安全流程先保存待验证秘密与恢复码，输入有效TOTP后启用因子 | S:Flow保存Secret的HMAC指纹并与AuthSessionIdentity绑定；错误码不消费流程，成功启用与AuthVersion递增同事务
+upstream_provider.go[PN8M]: F:保存远端CodeGo、NewAPI或Sub2API账户配置、加密凭证、同步状态与上游组快照 | R:code:controller/upstream_provider.go,code:service/upstream_provider.go,code:model/channel.go,code:model/ability.go | A:管理服务测试连接、同步远端分组并将远端账户绑定为本地渠道 | S:凭证字段不序列化；同步按ConfigVersion拒绝旧端点返回，分组消失或变为动态时同事务禁用关联渠道及Ability
+usedata.go[PA6S]: F:按小时聚合用户、模型、分组、Token、渠道和节点的额度与Token用量 | R:code:model/log.go,code:controller/usedata.go,code:model/usedata_flow.go | A:消费日志把统计增量暂存内存缓存，定时批量合并后供用量图表查询 | S:只有数据导出启用时后台才刷新缓存，时间桶固定按Unix小时对齐
+usedata_flow.go[PA7S]: F:按角色聚合含分组、模型、Token和渠道维度的消费流量 | R:code:model/usedata.go,code:controller/usedata.go,code:model/token.go,code:model/channel.go | A:自助视图仅汇总本人，管理员和Root视图分别扩展用户或节点维度 | S:只查询use_group非空的数据；删除的Token不补名称并由前端按ID标记
+usedata_rankings.go[PA5T]: F:按消费Token量汇总模型排行榜及时间桶序列 | R:code:controller/rankings.go,code:service/rankings.go,code:model/usedata.go | A:排行榜服务读取指定时间范围并按小时或自定义秒数分桶 | S:MySQL使用FLOOR表达式，SQLite与PostgreSQL使用整数除法计算桶起点
+user.go[PI9L]: F:持久化账户凭证、身份绑定、角色状态、用户组、钱包和个人设置并提供账户查询及变更 | R:code:controller/user.go,code:controller/oauth.go,code:model/user_session.go,code:model/user_auth_cache.go,code:model/account_security.go,code:model/user_cache.go | A:注册、OAuth登录、管理账户操作及额度查询调用专用事务和缓存路径 | S:敏感认证状态变化递增AuthVersion并撤销Session；邮箱变更使用规范化邮箱锁，用户更新不得用旧快照覆盖配额、凭证或权限
+user_auth_cache.go[CS9M]: F:以Redis待处理Fence和单调版本下限协调用户鉴权缓存的版本更新及发布 | R:code:model/user.go,code:model/user_cache.go,code:model/user_session.go,code:service/auth_session.go | A:限制性认证变更在事务前发布拒绝Fence，提交后提升已提交版本并刷新用户缓存 | S:读取和缓存写入均拒绝低于pending或committed版本的快照，待处理Fence寿命长于用户缓存TTL以避免回滚后重新授权旧状态
+user_cache.go[CI8M]: F:缓存用户基础鉴权、分组、设置和钱包字段并提供Redis故障时的数据库回源 | R:code:model/user.go,code:model/user_auth_cache.go,code:model/quota_reserve.go,code:middleware/auth.go | A:认证中间件从统一UserBase投影写入请求上下文，额度增减通过原子缓存函数同步 | S:缓存不包含密码或访问Token；普通资料快照禁止覆盖活跃缓存中的预扣Quota，认证读取还需通过AuthVersion Fence
+user_oauth_binding.go[PI8S]: F:保存用户与自定义OAuth提供方账号的绑定关系并支持按任一侧查找 | R:code:model/custom_oauth_provider.go,code:model/account_security.go,code:controller/custom_oauth.go,code:controller/oauth.go | A:OAuth登录按提供方与外部用户ID查找本地用户，账户页查询或解除绑定 | S:联合唯一索引同时保证每用户每提供方一个绑定及每外部提供方账号只能归属一个用户
+user_quota_adjustment.go[PB8T]: F:按增加、扣减或覆盖方式原子调整用户钱包并返回不可变前后值快照 | R:code:controller/user_quota.go,code:model/user.go,code:common/quota_math.go,code:model/user_cache.go | A:管理员额度接口执行角色校验、数据库事务变更及已提交差额缓存同步 | S:Root以外操作者不能调整同级或更高角色用户；Decimal转换和钱包余额均受MaxWalletQuota边界保护
+user_session.go[PS9L]: F:维护浏览器Session生命周期、刷新凭证轮换、撤销、设备列表与多节点缓存 | R:code:service/auth_session.go,code:controller/auth_session.go,code:model/auth_flow.go,code:model/user_auth_cache.go | A:访问JWT按SID查询有效Session，刷新或敏感操作推进Session及用户鉴权版本 | S:数据库是最终权威且Refresh仅存HMAC摘要；重放已知旧摘要超宽限期会撤销整个Session，未知摘要不会撤销受害者会话
+utils.go[CG6S]: F:聚合待写用户或Token额度、使用额度、请求数及渠道用量的进程内批量更新队列 | R:code:model/user.go,code:model/token.go,code:model/channel.go,code:model/quota_reserve.go | A:后台定时批处理将同一记录的多次差额合并后写入数据库 | S:累计整数溢出会饱和到机器边界并记SysError，增加批量更新类型时必须同步建立对应Store和锁
+vendor_management.go[PC8M]: F:预览并原子应用供应商批量分配、合并和删除 | R:code:controller/vendor_meta.go,code:model/vendor_meta.go,code:model/model_meta.go,code:model/model_metadata_sync.go | A:管理端先获取版本化预览再提交目标供应商及选定记录 | S:Apply重建并比对完整Preview版本后才写入；仍被模型引用的供应商不可删除，变更与删除在同一元数据事务
+vendor_meta.go[PC7S]: F:持久化模型供应商名称、描述、图标和软删除状态并提供目录查询 | R:code:model/model_meta.go,code:model/pricing.go,code:model/vendor_management.go,code:controller/vendor_meta.go | A:模型目录验证Vendor引用并按供应商聚合展示模型 | S:供应商名称在未删除记录中唯一；更新使用版本快照检查，删除前拒绝仍被模型引用的记录
+
+===/home/debian/ai/new-api/oauth/===
+discord.go[II8S]: F:实现Discord授权码换Token、获取用户资料及本地账户标识映射 | R:code:oauth/provider.go,code:controller/oauth.go,code:model/user.go,code:model/external_identity_claim.go | A:统一OAuth流程注册Provider后使用Discord numeric ID登录或绑定账户 | S:用户关联使用稳定的Discord UID而非可变用户名
+generic.go[II9L]: F:依据数据库提供方配置执行通用OAuth/OIDC授权码交换、用户字段映射和访问策略判断 | R:code:model/custom_oauth_provider.go,code:oauth/registry.go,code:controller/oauth.go,code:model/user_oauth_binding.go | A:为自定义Provider统一取回用户身份并通过嵌套AND/OR策略决定准入 | S:配置的Token与UserInfo端点由服务器直接请求且请求携带ClientSecret或AccessToken；响应准入策略必须先验证结构再执行
+github.go[II8S]: F:实现GitHub OAuth授权码交换、个人资料读取及Provider接口适配 | R:code:oauth/provider.go,code:controller/oauth.go,code:model/user.go | A:将GitHub身份转换为统一OAuthUser供登录和绑定流程消费 | S:关联键使用GitHub不可变numeric ID；用户名仅作为可变展示名和旧账户迁移信息
+linuxdo.go[II8S]: F:实现Linux DO OAuth授权码交换、资料读取和外部身份映射 | R:code:oauth/provider.go,code:controller/oauth.go,code:model/user.go | A:取得统一OAuthUser并传递信任等级等资料到账户流程 | S:账号准入必须达到LINUX_DO_MINIMUM_TRUST_LEVEL配置阈值；Token和UserInfo端点可由环境变量覆盖
+oidc.go[II8S]: F:实现内建OIDC授权码交换、userinfo字段映射和用户主键适配 | R:code:oauth/provider.go,code:controller/oauth.go,code:model/user.go | A:统一OAuth流程用IdP的sub标识登录或绑定用户 | S:OIDC绑定使用稳定sub而非可变用户名；Token与UserInfo端点由站点OIDC配置指定
+provider.go[II7T]: F:定义各内建和自定义OAuth提供方共用的启用、授权码交换、身份读取及账号映射契约 | R:code:oauth/registry.go,code:oauth/types.go,code:controller/oauth.go | A:控制器通过Provider接口执行统一登录和绑定编排 | S:通用外部身份存储的ProviderUserIDColumn返回空值，避免更新Users列而改走绑定表
+registry.go[II8S]: F:线程安全注册内建OAuth Provider并从数据库加载或热重载自定义提供方 | R:code:oauth/provider.go,code:oauth/generic.go,code:model/custom_oauth_provider.go,code:controller/oauth.go | A:授权流程按slug取用提供方实现，配置变更后替换对应注册项 | S:自定义slug不能覆盖同名内建Provider；重载先移除旧自定义项再读取数据库，冲突会报告且跳过注册
+telegram.go[IS9M]: F:执行Telegram OIDC授权码交换、PKCE验证、JWKS签名验证和用户身份转换 | R:code:controller/oauth.go,code:oauth/provider.go,code:model/auth_flow.go,code:model/external_identity_claim.go | A:内建Telegram Provider依赖服务端保存的TelegramOAuthFlow完成登录或绑定 | S:PKCE verifier仅随服务端Flow保存；ID Token必须由Issuer JWKS验证且限制RS256或ES256
+types.go[II6T]: F:定义OAuth访问令牌、标准化用户身份、可本地化认证错误和访问拒绝错误 | R:code:oauth/provider.go,code:oauth/registry.go,code:controller/oauth.go | A:所有Provider实现及控制器共用传输结构和错误接口 | S:-
+
+===/home/debian/ai/new-api/pkg/billingexpr/===
+compile.go[KB9M]: F:按表达式版本编译并缓存倍率程序，提取变量与任务用量键并插桩请求倍率追踪 | R:code:pkg/billingexpr/run.go,code:pkg/billingexpr/settle.go,code:setting/billing_setting/tiered_billing.go,code:relay/helper/price.go | A:价格校验、预扣和结算共享编译程序及AST分析结果 | S:仅编译明确支持的版本环境；内部_trace标识符为保留名，request_rules只追踪依赖请求探针且结构为数值分支、回退1的三元式
+expr.md[SB9S]: F:规定分层计费表达式语言、Token归一化、任务用量表达式、版本化换算和预扣结算流程 | R:code:pkg/billingexpr/compile.go,code:pkg/billingexpr/settle.go,code:setting/billing_setting/tiered_billing.go,code:relay/helper/price.go,code:service/tiered_settle.go | A:模型价格实现和维护者据此理解表达式契约及跨层数据流 | S:Token表达式系数按美元每百万Token计价，任务表达式按单次USD成本；修改billingexpr前必须先遵守本设计合同
+round.go[KB8T]: F:把分层计费Quota四舍五入统一委托给共享饱和数学函数 | R:code:common/quota_math.go,code:pkg/billingexpr/settle.go | A:预扣估算和实际结算共用同一整数转换规则 | S:QuotaRound采用远离零舍入并饱和到int32边界，严格变体对不可表示输入报错
+run.go[KB9S]: F:在Token、请求头、JSON路径和插件用量环境中执行编译程序并返回成本与命中轨迹 | R:code:pkg/billingexpr/compile.go,code:pkg/billingexpr/types.go,code:relay/helper/billing_expr_request.go | A:预扣与结算传入冻结表达式参数并记录匹配Tier和请求倍率 | S:header名大小写不敏感；param只读提交时请求体快照，u只读已验证Usage映射，未知时区回退UTC
+settle.go[KB9T]: F:依据冻结BillingSnapshot重跑实际用量表达式并生成分层计费Quota结果 | R:code:pkg/billingexpr/run.go,code:pkg/billingexpr/round.go,code:common/quota_math.go,code:service/tiered_settle.go | A:服务结算读取实际Token或任务Usage并返回Tier轨迹和限幅标记 | S:Token价格按每百万转换而任务Usage价格不除百万；GroupRatio之后使用共享Checked舍入以供管理员日志审计
+types.go[KB7T]: F:定义表达式请求环境、Token维度、Tier和倍率轨迹、冻结账单快照及结算结果 | R:code:pkg/billingexpr/compile.go,code:pkg/billingexpr/run.go,code:pkg/billingexpr/settle.go | A:计费预扣与结算跨调用传递相同的表达式及用量上下文 | S:BillingSnapshot不保存已编译VM指针，持久化表达式哈希、版本、QuotaPerUnit和组倍率
+
+===/home/debian/ai/new-api/pkg/cachex/===
+codec.go[CD5T]: F:定义泛型缓存值到Redis字符串的编解码接口及整数、字符串和JSON实现 | R:code:pkg/cachex/hybrid_cache.go,code:model/subscription.go | A:HybridCache按调用方选择的codec读写Redis缓存值 | S:-
+hybrid_cache.go[CP8M]: F:提供泛型Redis或本地HotCache双层后端、TTL、命名空间隔离和批量失效 | R:code:pkg/cachex/codec.go,code:pkg/cachex/namespace.go,code:model/subscription.go,code:service/channel_affinity.go | A:服务按Redis启用状态切换跨节点或进程内缓存 | S:Redis读取错误原样返回而不静默转本地缓存；仅Redis关闭时使用内存后端，Purge扫描本Namespace键
+namespace.go[CD5T]: F:将缓存Key映射到稳定前缀并提供按命名空间扫描的匹配模式 | R:code:pkg/cachex/hybrid_cache.go | A:不同业务缓存构造HybridCache时指定各自版本化Namespace | S:-
+
+===/home/debian/ai/new-api/pkg/ionet/===
+client.go[IN8M]: F:构建io.net公开或企业API客户端、注入HTTP传输、鉴权并统一转换错误响应 | R:code:pkg/ionet/types.go,code:controller/deployment.go,code:service/deployment.go | A:云部署服务通过Client对远端JSON API发送带X-API-KEY的有界HTTP请求 | S:默认API请求超时30秒；客户端BaseURL决定凭证发送目标且自定义HTTPClient可替换传输实现
+container.go[IN8M]: F:查询io.net部署容器、任务和日志并封装停止、重启与容器执行操作 | R:code:pkg/ionet/client.go,code:pkg/ionet/types.go,code:controller/deployment.go | A:运维服务按deployment与container ID调用远端端点并规范化响应 | S:StreamContainerLogs不是长连接推流，而是按cursor轮询并等待两秒；错误时停止且返回调用方
+deployment.go[IN9M]: F:创建、列举、查询、调整、延长或删除io.net GPU部署并估算费用 | R:code:pkg/ionet/client.go,code:pkg/ionet/types.go,code:controller/deployment.go | A:将平台与资源配置转换为远端容器API请求并返回本地价格视图 | S:部署提交校验资源名称、位置、硬件、镜像、副本与时长；价格估算统一归一化hour/day/week/month后转换小时费率
+hardware.go[IN8S]: F:查询io.net可用GPU副本、硬件类型、最大GPU数、位置及实时可用量 | R:code:pkg/ionet/client.go,code:pkg/ionet/types.go,code:controller/deployment.go | A:部署配置根据硬件和位置目录展示当前资源可用性 | S:请求硬件和GPU数量必须为正值；API未返回总量时按位置或硬件条目求和
+jsonutil.go[IN6T]: F:解码io.net直接或data包装响应并递归规范缺少时区的时间字段 | R:code:pkg/ionet/types.go,code:pkg/ionet/deployment.go,code:pkg/ionet/container.go | A:部署详情和容器响应使用对应的严格或兼容时间解码器 | S:无时区时间字符串按UTC解析后格式化为RFC3339Nano
+types.go[IN8M]: F:定义io.net HTTP传输接口、GPU部署请求响应、容器日志及硬件位置数据契约 | R:code:pkg/ionet/client.go,code:pkg/ionet/deployment.go,code:pkg/ionet/container.go,code:pkg/ionet/hardware.go | A:客户端方法与管理控制器共享供应商API类型 | S:更新部署的TrafficPort使用指针区分未提供与显式零值；RegistrySecret和SecretEnvVariables承载上游凭证
+
+===/home/debian/ai/new-api/pkg/jsplugin/===
+cli.go[XE6T]: F:实现new-api plugin lint和test命令以校验插件源码或重放JSON Fixture | R:code:main.go,code:pkg/jsplugin/engine.go,code:pkg/jsplugin/fixture.go | A:开发者从命令行检查插件元数据、Hook和确定性样例 | S:命令输出与退出码分别使用注入的stdout和stderr
+engine.go[RE9L]: F:在Sobek中编译、初始化并并发调度同步JavaScript插件Hook | R:code:pkg/jsplugin/registry.go,code:pkg/jsplugin/utils.go,code:middleware/task_plugin.go,code:model/task_plugin.go | A:宿主按导出名或成员路径调用插件并取得JSON兼容值 | S:插件不能import、async或await；默认每实例并发8且Hook五秒超时，超时或panic污染的Runtime不得回收到池中
+fixture.go[TE6S]: F:按JSON Fixture顺序调用声明的插件Hook并比对结果或错误断言 | R:code:pkg/jsplugin/engine.go,code:pkg/jsplugin/cli.go | A:plugin test命令回放确定性输入并汇总已通过用例数 | S:Fixture可固定unixNow，使签名和时间Hook在重复回放中保持一致
+icon.go[IS8S]: F:解析插件Logo Data URI并验证PNG签名或SVG XML内容 | R:code:model/task_plugin.go,code:controller/task_plugin.go,code:pkg/jsplugin/registry.go | A:上传流程只保存通过检查的PNG或SVG Sidecar图标 | S:Data URI最大512KiB；SVG拒绝script、foreignObject、事件属性、DOCTYPE、javascript及绝对外部资源引用
+model_fold.go[CE5T]: F:为任务插件模型索引执行ASCII大写字母不区分大小写的折叠 | R:code:pkg/jsplugin/registry.go,code:model/task_model_alias.go,code:pkg/jsplugin/routing.go | A:模型声明、协议路由和别名映射使用同一规范化键 | S:只折叠ASCII A-Z，Unicode相似字符保持原样以避免模型名冒充
+registry.go[RE9L]: F:编译并校验插件Manifest、Usage Schema与Hook契约，维护内建工厂及数据库覆盖Registry | R:code:pkg/jsplugin/engine.go,code:pkg/jsplugin/routing.go,code:model/task_plugin.go,code:middleware/task_plugin.go,code:docs/plugin-api/v1.schema.json | A:插件创建、热更新和启停生成新的不可变RoutingGeneration供请求Pin | S:更新碰撞会保留当前可运行Generation并记录拒绝状态；协议声明必须符合宿主操作表且Usage字段单位与示例先校验
+request.go[IS9T]: F:校验插件请求URL只能指向渠道基础主机或管理员授权Host | R:code:pkg/jsplugin/engine.go,code:pkg/jsplugin/registry.go,code:relay/channel/task/jsplugin/adaptor.go | A:任务适配器发送上游请求前验证目标主机和端口 | S:该检查阻止插件将渠道凭证发送到未授权Host；只规范HTTP默认端口与HTTPS默认端口匹配
+routing.go[RE9L]: F:定义任务插件声明路由、宿主Responses和Video协议操作表及不可变路由索引 | R:code:pkg/jsplugin/registry.go,code:middleware/task_plugin.go,code:controller/plugin_protocol.go,code:model/task_model_alias.go | A:请求入口依据已Pin的RoutingGeneration选择Route或协议Hook | S:自定义Route不得覆盖host或保留命名空间；共享协议必须使用宿主定义的BodyKind、Model字段和受支持请求模式
+utils.go[RE7S]: F:向JS运行时注入时钟、JWT与HMAC签名、Base64、UUID及Volcengine V4签名函数 | R:code:pkg/jsplugin/engine.go,code:relay/channel/volcengine/sign.go | A:插件用受控宿主工具构造协议所需签名和确定性日志 | S:Volcengine签名时间从注入时钟取得，Fixture可固定时间复现相同签名
+
+===/home/debian/ai/new-api/pkg/perf_metrics/===
+flush.go[CO7T]: F:将已完成的内存或Redis性能桶原子汇入数据库并按保留天数清理历史 | R:code:pkg/perf_metrics/metrics.go,code:model/perf_metric.go,code:setting/perf_metrics_setting | A:后台FlushLoop周期启用后合并请求、延迟、TTFT和生成用量 | S:写库失败会把已drain计数重新加回桶；仅刷新结束时间早于当前桶的完整桶
+metrics.go[CO8L]: F:采集Relay延迟、TTFT、成功率、生成速度并合并进程内、Redis活动桶与数据库聚合 | R:code:pkg/perf_metrics/types.go,code:pkg/perf_metrics/flush.go,code:model/perf_metric.go,code:relay/common/relay_info.go | A:运维接口按模型、分组和最近时间范围读取分桶序列及全模型摘要 | S:查询小时范围默认24小时且最多30天；seriesSchema是前端序列缓存契约，汇总中nil组列表表示全组而空列表不返回结果
+types.go[CO7S]: F:定义Relay性能样本、分组聚合响应、序列桶和并发原子计数器 | R:code:pkg/perf_metrics/metrics.go,code:pkg/perf_metrics/flush.go,code:model/perf_metric.go | A:采集和持久化层共享Sample及Bucket统计结构 | S:桶drain以atomic.Swap清零，数据库写入失败时flush必须把已取计数加回
+
+===/home/debian/ai/new-api/plugins/===
+.oxfmtrc.json[FV4T]: F:统一内置任务插件JavaScript源码的Oxfmt行宽、引号、分号和换行格式 | R:code:plugins/embed.go,code:plugins/tasks/alibaba/plugin.js,code:plugins/tasks/sunoapi/plugin.js | A:插件源码格式化流程在plugins目录读取本配置 | S:配置要求LF并保留文件结尾换行
+.oxlintrc.json[FQ5T]: F:配置内置任务插件JavaScript Oxlint规则、正确性等级及宿主全局变量 | R:code:plugins/embed.go,code:pkg/jsplugin/engine.go,code:plugins/tasks/alibaba/plugin.js | A:静态检查插件源码时按此配置识别console与utils | S:console和utils为只读宿主注入全局，插件代码应通过宿主而非未声明环境访问它们
+embed.go[IE8T]: F:将tasks目录内置插件源码及Sidecar图标嵌入二进制并注册为Factory插件 | R:code:pkg/jsplugin/registry.go,code:pkg/jsplugin/icon.go,code:plugins/tasks | A:进程启动时遍历各插件目录、编译注册并验证图标 | S:任一嵌入源码编译失败或随附图标校验失败会使初始化panic而阻止服务带残缺插件启动
+
+===/home/debian/ai/new-api/plugins/tasks/alibaba/===
+plugin.js[IE9L]: F:适配阿里云百炼Wan视频模型并提供原生DashScope路由及OpenAI Responses和Video协议 | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:middleware/task_plugin.go,code:service/task_billing.go | A:转换文本、首尾帧与多模态内容并轮询任务、暴露视频Artifact和计费Usage | S:Wan3.0的duration=-1先转为auto_duration标记；显式时长限制2至30秒，结算时长事实封顶3600秒
+
+===/home/debian/ai/new-api/plugins/tasks/doubao/===
+plugin.js[IE9L]: F:适配火山引擎Doubao Seedance视频提交、草稿任务引用、轮询和视频Artifact | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:pkg/billingexpr/expr.md,code:service/task_billing.go | A:统一OpenAI Responses与Video输入为Contents生成请求并提取上游Token用量 | S:计费Usage声明tokens、resolution和video_input维度；提交Token为估值，成功轮询可用实际usage覆盖以结算差额
+
+===/home/debian/ai/new-api/plugins/tasks/google/===
+plugin.js[IE8M]: F:适配Google Veo Gemini API长运行任务并转换提示词、图片输入、模型状态和生成视频 | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:pkg/billingexpr/expr.md,code:controller/task.go | A:调用predictLongRunning后轮询operation并将视频URI作为私有Artifact代理 | S:按秒数与720p、1080p或4k输出层提供Usage估值；查询时Google长运行Operation缺省done字段仍表示处理中
+
+===/home/debian/ai/new-api/plugins/tasks/hailuo/===
+plugin.js[IE9L]: F:适配MiniMax Hailuo及H3多模态视频生成，处理图像、参考视频、音频、任务轮询和Artifact | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:service/task_billing.go,code:pkg/billingexpr/expr.md | A:将传统Video接口和Responses文本输入转换为不同Hailuo版本请求并在完成时提取实际Usage | S:H3显式校验duration、resolution和输入媒体上限；超出使用约定的Completion事实被省略，结算沿用已限幅提交估值
+
+===/home/debian/ai/new-api/plugins/tasks/jimeng/===
+plugin.js[IE9L]: F:适配火山引擎即梦异步视频生成、图片帧输入、动作和req_key产品映射 | R:code:plugins/embed.go,code:pkg/jsplugin/utils.go,code:docs/plugin-api/v1.md,code:service/task_billing.go | A:支持原生CV动作路由及OpenAI Responses和Video请求并用V4签名鉴权 | S:仅S2.0 Pro允许5秒，V30只允许5或10秒；AK|SK格式需由宿主volcSignV4签名且签名Body必须与实际请求体一致
+
+===/home/debian/ai/new-api/plugins/tasks/kling/===
+plugin.js[IE9L]: F:适配快手Kling文生和图生视频、异步查询及视频Artifact | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:service/task_billing.go,code:pkg/billingexpr/expr.md | A:支持OpenAI Responses、Video和Kling原生路由并估算或读取资源包单位 | S:AK|SK凭证在Hook内签发短期HS256 JWT；完成时仅接受有限final_unit_deduction并以实际units替换提交估值
+
+===/home/debian/ai/new-api/plugins/tasks/sora/===
+plugin.js[IE8M]: F:适配OpenAI Sora视频创建、Remix、任务状态、multipart首帧和Artifact内容代理 | R:code:plugins/embed.go,code:controller/video_proxy.go,code:docs/plugin-api/v1.md,code:service/task_billing.go | A:将Responses或Video输入映射到/v1/videos协议并回传远端视频产物 | S:Remix路由使用已有上游TaskID；multipart只接受单个input_reference文件，内容请求转发API凭证
+
+===/home/debian/ai/new-api/plugins/tasks/sunoapi/===
+plugin.js[IE8M]: F:适配非官方SunoAPI歌曲或歌词生成、批量任务轮询、音频与封面Artifact及Responses结果 | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:service/task_billing.go,code:pkg/billingexpr/expr.md | A:按每批任务IDs调用/suno/fetch并从最终列表更新任务和计费Usage | S:账单区分music与lyrics且Completion用实际clip数量覆盖估值；Artifact Key以宿主HMAC生成而不直接暴露歌曲ID
+
+===/home/debian/ai/new-api/plugins/tasks/vertex-ai/===
+plugin.js[IE9M]: F:适配Vertex AI Veo模型、区域路由、JWT鉴权及Google Long-Running Operation查询 | R:code:plugins/embed.go,code:pkg/jsplugin/utils.go,code:docs/plugin-api/v1.md,code:service/task_billing.go | A:调用predictLongRunning并解码Operation结果或视频URI供受控Artifact读取 | S:内建auth类型要求宿主提供oauth2_jwt项目令牌；仅允许4、6、8秒以及720p、1080p、4k，图片只接受PNG或JPEG
+
+===/home/debian/ai/new-api/plugins/tasks/vidu/===
+plugin.js[IE9L]: F:适配Vidu文生、图生、首尾帧及参考生视频并提供Responses和异步Artifact协议 | R:code:plugins/embed.go,code:docs/plugin-api/v1.md,code:service/task_billing.go,code:pkg/billingexpr/expr.md | A:提交时估算duration与resolution并在查询完成后以真实credits更新任务账单 | S:vidu2.0限定图像输入且只允许4秒或8秒组合；viduq1固定5秒，其他模型时长受3600秒上限约束
+
+===/home/debian/ai/new-api/relay/===
+alpha_search_handler.go[EN8S]: F:代理Responses Alpha Search到受支持渠道并回传上游响应 | R:code:relay/helper/model_mapped.go,code:relay/channel/adapter.go,code:service/billing.go,code:relay/common/relay_info.go | A:入口检查渠道协议、改写映射模型、应用参数覆盖并复用标准错误处理 | S:只允许Sub2API、NewAPI、Codex与Advanced Custom渠道；上游无Usage时仍按一次web_search_preview计费
+audio_handler.go[EN9T]: F:编排音频转录或翻译请求校验、模型映射、协议转换、上游响应和音频计费 | R:code:relay/channel/adapter.go,code:relay/helper/model_mapped.go,code:service/billing.go,code:common/audio.go | A:按音频Token明细选择音频计量，否则使用文本消费路径 | S:转换或适配器失败时标记不重试；分流音频或文本计费依据响应的Prompt与Completion AudioTokens
+
+===/home/debian/ai/new-api/relay/channel/===
+adapter.go[IN9S]: F:定义普通渠道与异步任务渠道的请求转换、发送、响应解析及结算扩展接口 | R:code:relay/channel/api_request.go,code:relay/relay_adaptor.go,code:service/task_billing.go,code:model/task.go | A:Relay根据协议选择Adaptor，任务提交与轮询使用独立TaskAdaptor | S:任务计费按Validate、Estimate或ValidatedUsage、提交调整和终态结算顺序执行；Artifact与Usage能力通过可选接口显式声明
+api_request.go[CN9L]: F:集中构造HTTP、表单和WebSocket上游请求并应用渠道代理、请求头覆盖及流式保活 | R:code:relay/channel/adapter.go,code:common/body_storage.go,code:service/proxy.go,code:middleware/logger.go | A:各Provider Adaptor通过共享传输层发送重放请求体并接收上游响应 | S:Header passthrough排除Cookie、Hop-by-hop和认证头，但显式Override可覆盖Authorization；HTTP自动跟随重定向被禁止以保留上游3xx响应
+
+===/home/debian/ai/new-api/relay/channel/advancedcustom/===
+adaptor.go[IC9L]: F:按渠道AdvancedCustom路由配置转换OpenAI、Claude及Gemini请求并适配端点、认证与响应格式 | R:code:relay/channel/adapter.go,code:relay/channel/api_request.go,code:relaykit/dto/channel_settings.go,code:service/request_conversion.go | A:依据入站路径和模型选择route、upstream模板、协议转换及原生响应解码 | S:相对UpstreamPath需ChannelBaseURL且只能是HTTP(S)，管理端点必须显式配置无转换路由；Header或Query认证会把渠道API Key写入上游请求
+
+===/home/debian/ai/new-api/relay/channel/ai360/===
+constants.go[FN4T]: F:声明ai360渠道适配器使用的默认模型列表和显示名称 | R:code:constant/channel.go,code:relay/channel/ai360/adaptor.go | A:渠道目录及模型发现读取静态渠道元数据 | S:-
+
+===/home/debian/ai/new-api/relay/channel/ali/===
+adaptor.go[IN8M]: F:将OpenAI、Claude、Responses、Embedding、Rerank和Image请求映射至阿里云百炼端点 | R:code:relay/channel/adapter.go,code:relay/channel/ali/image.go,code:relay/channel/ali/rerank.go,code:relay/channel/ali/dto.go | A:按RelayMode选DashScope URL、适配器转换和同步或异步响应处理 | S:Claude直连Anthropic Messages仅对环境变量模型匹配生效；异步图像模型附带DashScope异步头并由响应层轮询
+constants.go[FN5T]: F:声明阿里云百炼适配器默认支持的聊天、Embedding和Rerank模型名 | R:code:relay/channel/ali/adaptor.go,code:relay/channel/ali/dto.go | A:渠道模型发现和静态适配器标识读取此列表 | S:-
+dto.go[IN7M]: F:定义DashScope聊天、Embedding、图像生成、Wan编辑、Rerank及响应Usage数据结构 | R:code:relay/channel/ali/adaptor.go,code:relay/channel/ali/image.go,code:relay/channel/ali/rerank.go | A:供应商转换器和响应处理器共享请求字段与结果格式 | S:可选Seed、Watermark、PromptExtend等标量用指针保留显式false或零值
+image.go[IB8M]: F:把OpenAI图像生成或编辑请求转换为DashScope同步、多模态及异步Image API并归一化返回图片 | R:code:relay/channel/ali/adaptor.go,code:relay/channel/ali/dto.go,code:relay/helper/price.go,code:common/image.go | A:解析标准字段、Extra参数或multipart文件，处理异步任务并生成OpenAI ImageResponse | S:从Extra.parameters读取的N同样按dto.MaxImageN验证后才进入OtherRatios；上游ImageCount优先用于最终计费
+image_wan.go[IB6T]: F:为旧版WAN图像编辑协议把multipart图片与文本转换为DashScope Base64 Images请求 | R:code:relay/channel/ali/adaptor.go,code:relay/channel/ali/image.go,code:relay/channel/ali/dto.go | A:检测旧WAN模型后绕过通用JSON图像编辑转换 | S:wan2.6与wan2.7不属于此旧版Wanx路径
+rerank.go[IN7T]: F:将统一Rerank请求字段映射为DashScope Query与Documents并转换排序结果和Usage | R:code:relay/channel/ali/adaptor.go,code:relay/channel/ali/dto.go,code:relaykit/dto/rerank.go | A:阿里适配器在Rerank模式发送请求并输出标准RerankResponse | S:请求未显式指定ReturnDocuments时默认true
+text.go[IN5T]: F:为DashScope普通模型和Thinking Budget模型调整OpenAI Chat请求参数 | R:code:relay/channel/ali/adaptor.go,code:relaykit/dto/openai_request.go | A:阿里Adaptor转换聊天请求时调用requestOpenAI2Ali | S:未配置TopP时不注入平台默认值，显式0或1才钳制至0.01或0.99
+
+===/home/debian/ai/new-api/relay/channel/aws/===
+adaptor.go[IN9S]: F:适配AWS Bedrock Claude及Nova模型并按API Key或AK/SK模式构造调用和响应 | R:code:relay/channel/adapter.go,code:relay/channel/aws/relay-aws.go,code:relay/channel/claude/adaptor.go,code:relay/channel/openai/adaptor.go | A:API Key模式复用HTTP传输，AK/SK模式使用AWS Bedrock SDK，响应分别走Claude或Nova解析器 | S:API Key格式必须为api-key|region；Gemini、Audio、Image、Embedding及Responses转换未实现，不能按通用Adaptor假定支持

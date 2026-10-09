@@ -30,7 +30,7 @@ services:
       - ./logs:/app/logs
     environment:
       - CRYPTO_SECRET= hdfZxD0uWaJo
-      - USER_SESSION_ACTIVE_LIMIT=1000
+      - USER_SESSION_ACTIVE_LIMIT=100
       - SQL_DSN=postgresql://proxy:pPhnbrlIKfYA@pg.ipflex.ink:5555/new-api # ⚠️ IMPORTANT: Change the password in production!
       - REDIS_CONN_STRING=redis://:QmpyOuWdwAHE@redis.ipflex.ink:6667 # ⚠️ IMPORTANT: Change the password in production!
       - TZ=Asia/Shanghai

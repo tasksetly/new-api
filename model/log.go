@@ -384,13 +384,20 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		logger.LogError(c, "failed to record log: "+err.Error())
 	}
 	if common.DataExportEnabled {
+		tokenUsed := params.PromptTokens + params.CompletionTokens
+		var usageMetadata struct {
+			InputTokensTotal int `json:"input_tokens_total"`
+		}
+		if err := common.Unmarshal([]byte(otherStr), &usageMetadata); err == nil && usageMetadata.InputTokensTotal > 0 {
+			tokenUsed = usageMetadata.InputTokensTotal + params.CompletionTokens
+		}
 		LogQuotaData(QuotaDataLogParams{
 			UserID:    userId,
 			Username:  username,
 			ModelName: params.ModelName,
 			Quota:     params.Quota,
 			CreatedAt: createdAt,
-			TokenUsed: params.PromptTokens + params.CompletionTokens,
+			TokenUsed: tokenUsed,
 			UseGroup:  params.Group,
 			TokenID:   params.TokenId,
 			ChannelID: params.ChannelId,
@@ -609,6 +616,88 @@ type Stat struct {
 	Quota int `json:"quota"`
 	Rpm   int `json:"rpm"`
 	Tpm   int `json:"tpm"`
+}
+
+type TokenUsageStats struct {
+	TotalTokens     int64    `json:"total_tokens"`
+	InputTokens     int64    `json:"input_tokens"`
+	CacheReadTokens int64    `json:"cache_read_tokens"`
+	CacheHitRate    *float64 `json:"cache_hit_rate"`
+}
+
+// GetTokenUsageStats aggregates token and cache usage from consume logs. The
+// metadata fallback keeps older logs usable before input_tokens was persisted.
+func GetTokenUsageStats(startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (TokenUsageStats, error) {
+	var rows []struct {
+		PromptTokens     int64  `gorm:"column:prompt_tokens"`
+		CompletionTokens int64  `gorm:"column:completion_tokens"`
+		Other            string `gorm:"column:other"`
+	}
+	query := LOG_DB.Table("logs").
+		Select("prompt_tokens, completion_tokens, other").
+		Where("type = ?", LogTypeConsume)
+	if startTimestamp > 0 {
+		query = query.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp > 0 {
+		query = query.Where("created_at <= ?", endTimestamp)
+	}
+	var err error
+	query, err = applyExplicitLogTextFilter(query, "username", username)
+	if err != nil {
+		return TokenUsageStats{}, err
+	}
+	query, err = applyExplicitLogTextFilter(query, "model_name", modelName)
+	if err != nil {
+		return TokenUsageStats{}, err
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
+	}
+	if channel != 0 {
+		query = query.Where("channel_id = ?", channel)
+	}
+	if group != "" {
+		query = query.Where(logGroupCol+" = ?", group)
+	}
+	if err := query.Find(&rows).Error; err != nil {
+		return TokenUsageStats{}, err
+	}
+
+	var stats TokenUsageStats
+	for _, row := range rows {
+		var other struct {
+			CacheTokens           int64  `json:"cache_tokens"`
+			CacheCreationTokens   int64  `json:"cache_creation_tokens"`
+			CacheWriteTokens      int64  `json:"cache_write_tokens"`
+			CacheCreationTokens5m int64  `json:"cache_creation_tokens_5m"`
+			CacheCreationTokens1h int64  `json:"cache_creation_tokens_1h"`
+			UsageSemantic         string `json:"usage_semantic"`
+			InputTokensTotal      int64  `json:"input_tokens_total"`
+		}
+		_ = common.Unmarshal([]byte(row.Other), &other)
+
+		cacheReadTokens := max(other.CacheTokens, 0)
+		inputTokens := max(other.InputTokensTotal, 0)
+		if inputTokens == 0 {
+			inputTokens = max(row.PromptTokens, 0)
+			if other.UsageSemantic == "anthropic" {
+				cacheWriteTokens := max(other.CacheWriteTokens, other.CacheCreationTokens)
+				cacheWriteTokens = max(cacheWriteTokens, other.CacheCreationTokens5m+other.CacheCreationTokens1h)
+				inputTokens += cacheReadTokens + max(cacheWriteTokens, 0)
+			}
+		}
+		cacheReadTokens = min(cacheReadTokens, inputTokens)
+
+		stats.TotalTokens += inputTokens + max(row.CompletionTokens, 0)
+		stats.InputTokens += inputTokens
+		stats.CacheReadTokens += cacheReadTokens
+	}
+	if stats.InputTokens > 0 {
+		cacheHitRate := float64(stats.CacheReadTokens) / float64(stats.InputTokens) * 100
+		stats.CacheHitRate = &cacheHitRate
+	}
+	return stats, nil
 }
 
 func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (stat Stat, err error) {

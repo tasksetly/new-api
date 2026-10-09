@@ -247,10 +247,10 @@ func TestCodeGoGroupsIncludeModelsPlatformsAndSuccessRate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		switch request.URL.Path {
-		case "/api/user/self/groups":
+		case "/api/marketplace/key-group-options":
 			assert.Equal(t, "Bearer management-token", request.Header.Get("Authorization"))
 			assert.Equal(t, "42", request.Header.Get("New-Api-User"))
-			_, _ = writer.Write([]byte(`{"success":true,"data":{"vip":{"ratio":0.5,"desc":"VIP"}}}`))
+			_, _ = writer.Write([]byte(`{"success":true,"data":[{"value":"vip","label":"VIP","description":"VIP","ratio":0.5}]}`))
 		case "/api/user/self/group-status":
 			_, _ = writer.Write([]byte(`{"success":true,"data":[{"group":"vip","request_count":10,"models":[{"model":"gpt-4o","success_rate":90,"request_count":10}]}]}`))
 		case "/api/pricing":
@@ -266,6 +266,8 @@ func TestCodeGoGroupsIncludeModelsPlatformsAndSuccessRate(t *testing.T) {
 	groups, err := client.Groups(context.Background(), upstreamProviderRemoteSession{Token: "management-token", RemoteUserID: "42"})
 	require.NoError(t, err)
 	require.Len(t, groups, 1)
+	assert.Equal(t, "VIP", groups[0].Name)
+	assert.Equal(t, "VIP", groups[0].Description)
 	assert.Equal(t, "openai", groups[0].Platform)
 	assert.Equal(t, []string{"gpt-4o"}, groups[0].Models)
 	assert.Equal(t, int64(10), groups[0].RequestCount)

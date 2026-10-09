@@ -25,6 +25,7 @@ import {
   Flame,
   TrendingUp,
   Activity,
+  DatabaseZap,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -87,6 +88,14 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       getValue: (stat, timeRangeMinutes = 1) =>
         safeDivide(stat?.tpm ?? 0, timeRangeMinutes),
     },
+    {
+      key: 'cacheHitRate',
+      title: t('Cache Hit Rate'),
+      description: t('Cache read tokens as a share of input tokens'),
+      icon: DatabaseZap,
+      iconTone: 'chart-1',
+      getValue: (stat) => stat?.cacheHitRate ?? 0,
+    },
   ]
 }
 
@@ -94,6 +103,8 @@ export function useSummaryCardsConfig(totals: {
   todayUsageDisplay: string
   usedDisplay: string
   requestCountDisplay: string
+  tokenCountDisplay: string
+  cacheHitRateDisplay: string
   currencyLabel: string
   currencyEnabled: boolean
 }) {
@@ -124,6 +135,20 @@ export function useSummaryCardsConfig(totals: {
       value: totals.requestCountDisplay,
       description: t('Total requests made'),
       icon: Activity,
+    },
+    {
+      key: 'tokens',
+      title: t('Token Consumption'),
+      value: totals.tokenCountDisplay,
+      description: t('Tokens consumed in the last 24 hours'),
+      icon: Layers,
+    },
+    {
+      key: 'cacheHitRate',
+      title: t('Cache Hit Rate'),
+      value: totals.cacheHitRateDisplay,
+      description: t('Cache read tokens as a share of input tokens'),
+      icon: DatabaseZap,
     },
   ]
 }

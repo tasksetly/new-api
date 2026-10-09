@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"slices"
 	"sort"
@@ -175,6 +176,16 @@ func UpdateOption(c *gin.Context) {
 		}
 	}
 	switch option.Key {
+	case "payment_setting.fee_rate_percent":
+		feeRate, err := strconv.ParseFloat(option.Value.(string), 64)
+		if err != nil ||
+			math.IsNaN(feeRate) ||
+			math.IsInf(feeRate, 0) ||
+			feeRate < 0 ||
+			feeRate > 100 {
+			common.ApiErrorMsg(c, "充值手续费率必须在 0 到 100 之间")
+			return
+		}
 	case "GitHubOAuthEnabled":
 		if option.Value == "true" && common.GitHubClientId == "" {
 			c.JSON(http.StatusOK, gin.H{

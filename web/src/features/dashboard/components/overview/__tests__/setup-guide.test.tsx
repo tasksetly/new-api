@@ -79,6 +79,21 @@ beforeEach(() => {
         return { data: { success: true, data: ['gpt-4o-mini'] } }
       case '/api/data/self':
         return { data: { success: true, data: [] } }
+      case '/api/log/self/stat':
+        return {
+          data: {
+            success: true,
+            data: {
+              quota: 0,
+              rpm: 0,
+              tpm: 0,
+              total_tokens: 0,
+              input_tokens: 0,
+              cache_read_tokens: 0,
+              cache_hit_rate: null,
+            },
+          },
+        }
       default:
         throw new Error(`Unexpected dashboard request: ${url}`)
     }

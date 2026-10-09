@@ -1,10 +1,15 @@
 package operation_setting
 
-import "github.com/QuantumNous/new-api/setting/config"
+import (
+	"math"
+
+	"github.com/QuantumNous/new-api/setting/config"
+)
 
 type PaymentSetting struct {
-	AmountOptions  []int           `json:"amount_options"`
-	AmountDiscount map[int]float64 `json:"amount_discount"` // 充值金额对应的折扣，例如 100 元 0.9 表示 100 元充值享受 9 折优惠
+	AmountOptions    []int           `json:"amount_options"`
+	AmountDiscount   map[int]float64 `json:"amount_discount"` // 充值金额对应的折扣，例如 100 元 0.9 表示 100 元充值享受 9 折优惠
+	FeeRatePercent   float64         `json:"fee_rate_percent"`
 
 	ComplianceConfirmed    bool   `json:"compliance_confirmed"`
 	ComplianceTermsVersion string `json:"compliance_terms_version"`
@@ -28,6 +33,16 @@ func init() {
 
 func GetPaymentSetting() *PaymentSetting {
 	return &paymentSetting
+}
+
+func (s *PaymentSetting) GetFeeRatePercent() float64 {
+	if math.IsNaN(s.FeeRatePercent) ||
+		math.IsInf(s.FeeRatePercent, 0) ||
+		s.FeeRatePercent < 0 ||
+		s.FeeRatePercent > 100 {
+		return 0
+	}
+	return s.FeeRatePercent
 }
 
 func IsPaymentComplianceConfirmed() bool {

@@ -775,17 +775,89 @@ func (client *codeGoUpstreamClient) Profile(ctx context.Context, session upstrea
 	}, nil
 }
 
+func codeGoGroupOptions(raw json.RawMessage) (map[string]map[string]any, error) {
+	groups := make(map[string]map[string]any)
+	var object map[string]json.RawMessage
+	if err := common.Unmarshal(raw, &object); err == nil {
+		// Marketplace responses commonly wrap the options in one of these
+		// properties. The legacy endpoint returns the keyed map directly.
+		for _, key := range []string{"groups", "options", "items", "data"} {
+			if nested, ok := object[key]; ok {
+				if parsed, parseErr := codeGoGroupOptions(nested); parseErr == nil && len(parsed) > 0 {
+					return parsed, nil
+				}
+			}
+		}
+		for key, value := range object {
+			var group map[string]any
+			if err := common.Unmarshal(value, &group); err != nil {
+				var label string
+				if common.Unmarshal(value, &label) == nil && strings.TrimSpace(label) != "" {
+					groups[key] = map[string]any{"name": label}
+				}
+				continue
+			}
+			remoteID := firstUpstreamNonEmpty(
+				upstreamString(group["value"]), upstreamString(group["group"]),
+				upstreamString(group["id"]), upstreamString(group["key"]), key,
+			)
+			if remoteID != "" {
+				groups[remoteID] = group
+			}
+		}
+		return groups, nil
+	}
+
+	var options []map[string]any
+	if err := common.Unmarshal(raw, &options); err == nil {
+		for _, group := range options {
+			remoteID := firstUpstreamNonEmpty(
+				upstreamString(group["value"]), upstreamString(group["group"]),
+				upstreamString(group["id"]), upstreamString(group["key"]), upstreamString(group["name"]),
+			)
+			if remoteID != "" {
+				groups[remoteID] = group
+			}
+		}
+		return groups, nil
+	}
+
+	var optionNames []string
+	if err := common.Unmarshal(raw, &optionNames); err != nil {
+		return nil, errors.New("upstream returned an unexpected group options response")
+	}
+	for _, name := range optionNames {
+		if name = strings.TrimSpace(name); name != "" {
+			groups[name] = map[string]any{"name": name}
+		}
+	}
+	return groups, nil
+}
+
 func (client *codeGoUpstreamClient) Groups(ctx context.Context, session upstreamProviderRemoteSession) ([]upstreamProviderRemoteGroup, error) {
 	headers, err := client.managementHeaders(session)
 	if err != nil {
 		return nil, err
 	}
-	body, _, err := client.request(ctx, http.MethodGet, "/api/user/self/groups", nil, nil, headers)
+	body, _, err := client.request(ctx, http.MethodGet, "/api/marketplace/key-group-options", nil, nil, headers)
 	if err != nil {
+		// The marketplace endpoint is used by third-party CodeGo builds. Keep
+		// compatibility with the upstream CodeGo endpoint used by older builds.
+		var statusErr *upstreamProviderHTTPStatusError
+		if !errors.As(err, &statusErr) || statusErr.status != http.StatusNotFound {
+			return nil, err
+		}
+		body, _, err = client.request(ctx, http.MethodGet, "/api/user/self/groups", nil, nil, headers)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var raw json.RawMessage
+	if err := decodeUpstreamPayload(body, &raw); err != nil {
 		return nil, err
 	}
-	var data map[string]map[string]any
-	if err := decodeUpstreamPayload(body, &data); err != nil {
+	data, err := codeGoGroupOptions(raw)
+	if err != nil {
 		return nil, err
 	}
 	groups := make([]upstreamProviderRemoteGroup, 0, len(data))
@@ -796,16 +868,17 @@ func (client *codeGoUpstreamClient) Groups(ctx context.Context, session upstream
 			continue
 		}
 		ratio, isStatic := upstreamFloat(group["ratio"])
-		description := upstreamString(group["desc"])
+		description := firstUpstreamNonEmpty(upstreamString(group["description"]), upstreamString(group["desc"]))
+		name := firstUpstreamNonEmpty(upstreamString(group["name"]), upstreamString(group["label"]), remoteID)
 		platform := firstUpstreamNonEmpty(upstreamString(group["platform"]), upstreamString(group["owner_by"]))
 		if !isStatic || !upstreamValidMultiplier(ratio) {
 			groupIndex[remoteID] = len(groups)
-			groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: platform, IsDynamic: true})
+			groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: name, Description: description, Platform: platform, IsDynamic: true})
 			continue
 		}
 		effective := ratio
 		groupIndex[remoteID] = len(groups)
-		groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: remoteID, Description: description, Platform: platform, Rate: ratio, EffectiveRate: &effective})
+		groups = append(groups, upstreamProviderRemoteGroup{RemoteID: remoteID, Name: name, Description: description, Platform: platform, Rate: ratio, EffectiveRate: &effective})
 	}
 
 	// CodeGo exposes model health separately from the compact group-ratio

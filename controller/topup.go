@@ -147,7 +147,22 @@ func GetEpayClient() *epay.Client {
 	return withUrl
 }
 
-func getPayMoney(amount int64, group string) float64 {
+func addPaymentFee(amount decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
+	feeRate := operation_setting.GetPaymentSetting().GetFeeRatePercent()
+	if feeRate == 0 || amount.Sign() <= 0 {
+		return amount, decimal.Zero
+	}
+
+	fee := amount.Mul(decimal.NewFromFloat(feeRate)).Div(decimal.NewFromInt(100))
+	payAmount := amount.Add(fee).Round(2)
+	feeAmount := payAmount.Sub(amount.Round(2))
+	if feeAmount.IsNegative() {
+		return amount, decimal.Zero
+	}
+	return payAmount, feeAmount
+}
+
+func getPayMoneyBreakdown(amount int64, group string) (float64, float64) {
 	dAmount := decimal.NewFromInt(amount)
 	// 充值金额以“展示类型”为准：
 	// - USD/CNY: 前端传 amount 为金额单位；TOKENS: 前端传 tokens，需要换成 USD 金额
@@ -172,9 +187,15 @@ func getPayMoney(amount int64, group string) float64 {
 	}
 	dDiscount := decimal.NewFromFloat(discount)
 
-	payMoney := dAmount.Mul(dPrice).Mul(dTopupGroupRatio).Mul(dDiscount)
+	basePayMoney := dAmount.Mul(dPrice).Mul(dTopupGroupRatio).Mul(dDiscount)
+	payMoney, feeAmount := addPaymentFee(basePayMoney)
 
-	return payMoney.InexactFloat64()
+	return payMoney.InexactFloat64(), feeAmount.InexactFloat64()
+}
+
+func getPayMoney(amount int64, group string) float64 {
+	payMoney, _ := getPayMoneyBreakdown(amount, group)
+	return payMoney
 }
 
 func getMinTopup() int64 {
@@ -288,7 +309,7 @@ func RequestEpay(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "获取用户分组失败"})
 		return
 	}
-	payMoney := getPayMoney(req.Amount, group)
+	payMoney, _ := getPayMoneyBreakdown(req.Amount, group)
 	if payMoney < 0.01 {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "充值金额过低"})
 		return
@@ -504,12 +525,16 @@ func RequestAmount(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "获取用户分组失败"})
 		return
 	}
-	payMoney := getPayMoney(req.Amount, group)
+	payMoney, feeAmount := getPayMoneyBreakdown(req.Amount, group)
 	if payMoney <= 0.01 {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "充值金额过低"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "success",
+		"data":       strconv.FormatFloat(payMoney, 'f', 2, 64),
+		"fee_amount": decimal.NewFromFloat(feeAmount).StringFixed(2),
+	})
 }
 
 func GetUserTopUps(c *gin.Context) {

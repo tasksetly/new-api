@@ -24,12 +24,12 @@ import { useTranslation } from 'react-i18next'
 
 import { StaggerContainer, StaggerItem } from '@/components/page-transition'
 import { Button } from '@/components/ui/button'
-import { getUserQuotaDates } from '@/features/dashboard/api'
+import { getTokenUsageStats, getUserQuotaDates } from '@/features/dashboard/api'
 import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
 import type { QuotaDataItem } from '@/features/dashboard/types'
 import { useStatus } from '@/hooks/use-status'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
-import { formatNumber, formatQuota } from '@/lib/format'
+import { formatNumber, formatPercent, formatQuota } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -163,12 +163,36 @@ export function SummaryCards() {
     staleTime: 60 * 1000,
   })
 
-  const summaryValues = useMemo(() => {
-    return {
+  const tokenUsageQuery = useQuery({
+    queryKey: [
+      'dashboard',
+      'overview',
+      'summary-token-usage',
+      summaryTimeRange.start_timestamp,
+      summaryTimeRange.end_timestamp,
+    ],
+    queryFn: async () =>
+      getTokenUsageStats({
+        start_timestamp: summaryTimeRange.start_timestamp,
+        end_timestamp: summaryTimeRange.end_timestamp,
+      }).catch(() => undefined),
+    staleTime: 60 * 1000,
+  })
+
+  const summaryValues = useMemo(
+    () => ({
       usedDisplay: formatQuota(usedQuota),
       requestCountDisplay: formatNumber(requestCount),
-    }
-  }, [requestCount, usedQuota])
+      tokenCountDisplay: formatNumber(
+        tokenUsageQuery.data?.data?.total_tokens ?? 0
+      ),
+      cacheHitRateDisplay:
+        tokenUsageQuery.data?.data?.cache_hit_rate == null
+          ? '-'
+          : formatPercent(tokenUsageQuery.data.data.cache_hit_rate),
+    }),
+    [requestCount, tokenUsageQuery.data, usedQuota]
+  )
 
   const currencyEnabledFromStore = isCurrencyDisplayEnabled()
   const statusCurrencyFlag =
@@ -263,7 +287,7 @@ export function SummaryCards() {
               </p>
             </div>
           </div>
-          <StaggerContainer className='grid grid-cols-3 gap-1.5 sm:gap-3'>
+          <StaggerContainer className='grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-3'>
             {items.map((it) => (
               <StaggerItem
                 key={it.key}

@@ -16,6 +16,7 @@ import (
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 	"github.com/thanhpk/randstr"
 	waffo "github.com/waffo-com/waffo-go"
 	"github.com/waffo-com/waffo-go/config"
@@ -86,7 +87,7 @@ func formatWaffoAmount(amount float64, currency string) string {
 // getWaffoPayMoney converts the user-facing amount to USD for Waffo payment.
 // Waffo only accepts USD, so this function handles the conversion from different
 // display types (USD/CNY/TOKENS) to the actual USD amount to charge.
-func getWaffoPayMoney(amount float64, group string) float64 {
+func getWaffoPayMoneyBreakdown(amount float64, group string) (float64, float64) {
 	originalAmount := amount
 	if operation_setting.GetQuotaDisplayType() == operation_setting.QuotaDisplayTypeTokens {
 		amount = amount / common.QuotaPerUnit
@@ -101,7 +102,25 @@ func getWaffoPayMoney(amount float64, group string) float64 {
 			discount = ds
 		}
 	}
-	return amount * setting.WaffoUnitPrice * topupGroupRatio * discount
+	basePayMoney := amount * setting.WaffoUnitPrice * topupGroupRatio * discount
+	if operation_setting.GetPaymentSetting().GetFeeRatePercent() == 0 {
+		return basePayMoney, 0
+	}
+
+	payAmount, feeAmount := addPaymentFee(decimal.NewFromFloat(basePayMoney))
+	if zeroDecimalCurrencies[getWaffoCurrency()] {
+		payAmount = payAmount.Round(0)
+		feeAmount = payAmount.Sub(decimal.NewFromFloat(basePayMoney).Round(0))
+		if feeAmount.IsNegative() {
+			feeAmount = decimal.Zero
+		}
+	}
+	return payAmount.InexactFloat64(), feeAmount.InexactFloat64()
+}
+
+func getWaffoPayMoney(amount float64, group string) float64 {
+	paymentAmount, _ := getWaffoPayMoneyBreakdown(amount, group)
+	return paymentAmount
 }
 
 type WaffoPayRequest struct {
@@ -134,13 +153,17 @@ func RequestWaffoAmount(c *gin.Context) {
 		return
 	}
 
-	payMoney := getWaffoPayMoney(float64(req.Amount), group)
+	payMoney, feeAmount := getWaffoPayMoneyBreakdown(float64(req.Amount), group)
 	if payMoney <= 0.01 {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "充值金额过低"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "success",
+		"data":       strconv.FormatFloat(payMoney, 'f', 2, 64),
+		"fee_amount": decimal.NewFromFloat(feeAmount).StringFixed(2),
+	})
 }
 
 // RequestWaffoPay 创建 Waffo 支付订单

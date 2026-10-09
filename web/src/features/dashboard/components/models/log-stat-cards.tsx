@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { IconBadge } from '@/components/ui/icon-badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getUserQuotaDates } from '@/features/dashboard/api'
+import { getTokenUsageStats, getUserQuotaDates } from '@/features/dashboard/api'
 import { useModelStatCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
 import {
   buildQueryParams,
@@ -29,11 +29,16 @@ import {
   getDefaultDays,
 } from '@/features/dashboard/lib'
 import type {
-  QuotaDataItem,
   DashboardFilters,
+  QuotaDataItem,
 } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
-import { formatCompactNumber, formatNumber, formatQuota } from '@/lib/format'
+import {
+  formatCompactNumber,
+  formatNumber,
+  formatPercent,
+  formatQuota,
+} from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -67,6 +72,7 @@ export function LogStatCards(props: LogStatCardsProps) {
     totalQuota: number
     totalCount: number
     totalTokens: number
+    cacheHitRate: number | null
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -91,11 +97,30 @@ export function LogStatCards(props: LogStatCardsProps) {
     const timeDiff = (timeRange.end_timestamp - timeRange.start_timestamp) / 60
     setTimeRangeMinutes(timeDiff)
 
-    void getUserQuotaDates(buildQueryParams(timeRange, filters), isAdmin)
-      .then((res) => {
+    void Promise.all([
+      getUserQuotaDates(buildQueryParams(timeRange, filters), isAdmin),
+      getTokenUsageStats(
+        {
+          start_timestamp: timeRange.start_timestamp,
+          end_timestamp: timeRange.end_timestamp,
+          ...(filters?.username && { username: filters.username }),
+        },
+        isAdmin
+      ).catch(() => undefined),
+    ])
+      .then(([res, tokenStatsRes]) => {
         if (abortController.signal.aborted) return
         const data = res?.data || []
-        setStats(calculateDashboardStats(data))
+        const fallbackStats = calculateDashboardStats(data)
+        const tokenStats = tokenStatsRes?.success
+          ? tokenStatsRes.data
+          : undefined
+        setStats({
+          totalQuota: fallbackStats.totalQuota,
+          totalCount: fallbackStats.totalCount,
+          totalTokens: tokenStats?.total_tokens ?? fallbackStats.totalTokens,
+          cacheHitRate: tokenStats?.cache_hit_rate ?? null,
+        })
         onDataUpdate?.(data, false)
       })
       .catch(() => {
@@ -119,18 +144,27 @@ export function LogStatCards(props: LogStatCardsProps) {
     rpm: stats?.totalCount ?? 0,
     quota: stats?.totalQuota ?? 0,
     tpm: stats?.totalTokens ?? 0,
+    cacheHitRate: stats?.cacheHitRate ?? 0,
   }
 
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
     const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
-    const formatted =
-      config.key === 'quota'
-        ? {
-            displayValue: formatQuota(rawValue),
-            fullValue: formatQuota(rawValue),
-          }
-        : formatStatNumber(rawValue, locale)
+    let formatted
+    if (config.key === 'cacheHitRate') {
+      const value = stats?.cacheHitRate
+      formatted = {
+        displayValue: value == null ? '-' : formatPercent(value),
+        fullValue: value == null ? '-' : formatPercent(value),
+      }
+    } else if (config.key === 'quota') {
+      formatted = {
+        displayValue: formatQuota(rawValue),
+        fullValue: formatQuota(rawValue),
+      }
+    } else {
+      formatted = formatStatNumber(rawValue, locale)
+    }
 
     return {
       title: config.title,
@@ -144,7 +178,7 @@ export function LogStatCards(props: LogStatCardsProps) {
 
   return (
     <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
+      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-6'>
         {items.map((it, idx) => {
           const Icon = it.icon
           let valueContent

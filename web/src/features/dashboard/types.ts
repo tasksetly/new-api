@@ -184,6 +184,13 @@ export interface UptimeGroupResult {
 // Dashboard Filter Types
 // ============================================================================
 
+export interface TokenUsageStats {
+  total_tokens: number
+  input_tokens: number
+  cache_read_tokens: number
+  cache_hit_rate: number | null
+}
+
 export interface DashboardFilters {
   start_timestamp?: Date
   end_timestamp?: Date

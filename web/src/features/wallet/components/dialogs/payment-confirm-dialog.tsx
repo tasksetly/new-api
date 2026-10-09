@@ -42,6 +42,7 @@ interface PaymentConfirmDialogProps {
   onConfirm: () => void
   topupAmount: number
   paymentAmount: number
+  feeAmount: number
   paymentMethod: PaymentMethod | undefined
   calculating: boolean
   processing: boolean
@@ -55,6 +56,7 @@ export function PaymentConfirmDialog({
   onConfirm,
   topupAmount,
   paymentAmount,
+  feeAmount,
   paymentMethod,
   calculating,
   processing,
@@ -63,7 +65,10 @@ export function PaymentConfirmDialog({
 }: PaymentConfirmDialogProps) {
   const { t } = useTranslation()
   const hasDiscount = discountRate > 0 && discountRate < 1 && paymentAmount > 0
-  const originalAmount = hasDiscount ? paymentAmount / discountRate : 0
+  const amountBeforeFee = Math.max(paymentAmount - feeAmount, 0)
+  const originalAmount = hasDiscount
+    ? amountBeforeFee / discountRate + feeAmount
+    : 0
   const discountAmount = hasDiscount ? originalAmount - paymentAmount : 0
 
   return (
@@ -91,6 +96,17 @@ export function PaymentConfirmDialog({
               })}
             </span>
           </div>
+
+          {feeAmount > 0 && !calculating && (
+            <div className='flex items-center justify-between'>
+              <span className='text-muted-foreground text-sm'>
+                {t('Payment fee')}
+              </span>
+              <span className='text-sm font-medium'>
+                {formatCurrency(feeAmount)}
+              </span>
+            </div>
+          )}
 
           <div className='flex items-center justify-between'>
             <span className='text-muted-foreground text-sm'>

@@ -26,8 +26,6 @@ const CODEX_CLI_HEADER_PASSTHROUGH_HEADERS = [
   'Originator',
   'Session_id',
   'Thread_id',
-  'Session-Id',
-  'Thread-Id',
   'X-Client-Request-Id',
   'User-Agent',
   'X-Codex-Beta-Features',

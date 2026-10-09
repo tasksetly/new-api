@@ -141,6 +141,7 @@ const paymentSchema = z.object({
       })
     }
   }),
+  FeeRatePercent: z.coerce.number().min(0).max(100),
   StripeApiSecret: z.string(),
   StripeWebhookSecret: z.string(),
   StripePriceId: z.string(),
@@ -427,6 +428,7 @@ export function PaymentSettingsSection({
       PayMethods: values.PayMethods.trim(),
       AmountOptions: values.AmountOptions.trim(),
       AmountDiscount: values.AmountDiscount.trim(),
+      FeeRatePercent: values.FeeRatePercent,
       StripeApiSecret: values.StripeApiSecret.trim(),
       StripeWebhookSecret: values.StripeWebhookSecret.trim(),
       StripePriceId: values.StripePriceId.trim(),
@@ -471,6 +473,7 @@ export function PaymentSettingsSection({
       PayMethods: initialRef.current.PayMethods.trim(),
       AmountOptions: initialRef.current.AmountOptions.trim(),
       AmountDiscount: initialRef.current.AmountDiscount.trim(),
+      FeeRatePercent: initialRef.current.FeeRatePercent,
       StripeApiSecret: initialRef.current.StripeApiSecret.trim(),
       StripeWebhookSecret: initialRef.current.StripeWebhookSecret.trim(),
       StripePriceId: initialRef.current.StripePriceId.trim(),
@@ -559,6 +562,13 @@ export function PaymentSettingsSection({
       updates.push({
         key: 'payment_setting.amount_discount',
         value: sanitized.AmountDiscount,
+      })
+    }
+
+    if (sanitized.FeeRatePercent !== initial.FeeRatePercent) {
+      updates.push({
+        key: 'payment_setting.fee_rate_percent',
+        value: sanitized.FeeRatePercent,
       })
     }
 
@@ -898,7 +908,7 @@ export function PaymentSettingsSection({
                   </p>
                 </div>
 
-                <div className='grid gap-6 md:grid-cols-2'>
+                <div className='grid gap-6 md:grid-cols-3'>
                   <FormField
                     control={form.control}
                     name='Price'
@@ -941,6 +951,31 @@ export function PaymentSettingsSection({
                         </FormControl>
                         <FormDescription>
                           {t('Smallest USD amount users can recharge (Epay)')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='FeeRatePercent'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Top-up fee rate (%)')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            step='0.01'
+                            min={0}
+                            max={100}
+                            {...safeNumberFieldProps(field)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Applies to Epay, Waffo, and Waffo Pancake wallet top-ups.'
+                          )}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
